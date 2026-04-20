@@ -18,6 +18,7 @@ import ImageUpload from "./upload_image"
 import { useState } from "react"
 import { CreateDishBodyType } from "@/src/schema/dish.schema"
 import { useAddDishMutation } from "@/src/queries/useDish"
+import { toast } from "sonner"
 const AddDish = (props: {
     isAddModalOpen: boolean;
     setIsAddModalOpen: (open: boolean) => void
@@ -37,11 +38,24 @@ const AddDish = (props: {
     ];
 
 
-    const addMutation = useAddDishMutation()
+    const addMutation = useAddDishMutation({
+        onSuccess: () => {
+            toast.success("Add Dish successfully")
+            setIsAddModalOpen(false)
+            setNewDish({
+                name: "",
+                price: "",
+                description: "",
+                image: "",
+                category: "MainCourse",
+                status: "Available"
+            })
+        }
+    });
+    const { isAddModalOpen, setIsAddModalOpen } = props
     const handleAddDish = (newDish: CreateDishBodyType) => {
         addMutation.mutate(newDish)
     }
-    const { isAddModalOpen, setIsAddModalOpen } = props
     return (
         <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
             <DialogContent className="max-w-lg rounded-lg border-border-subtle bg-card p-0 shadow-modal">

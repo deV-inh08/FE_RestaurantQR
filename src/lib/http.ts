@@ -48,7 +48,7 @@ export class EntityError extends HttpError {
 
 
 const request = async <TResponse>(
-    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH',
     url: string,
     options?: CustomOptions
 ) => {
@@ -148,7 +148,10 @@ const http = {
         request<TResponse>('PUT', url, { ...options, body }),
 
     delete: <TResponse>(url: string, options?: Omit<CustomOptions, 'body'>) =>
-        request<TResponse>('DELETE', url, options)
+        request<TResponse>('DELETE', url, options),
+
+    patch: <TResponse>(url: string, body: any, options?: Omit<CustomOptions, 'body'>) =>
+        request<TResponse>('PATCH', url, { ...options, body })
 }
 
 export default http

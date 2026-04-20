@@ -56,6 +56,11 @@ export const formatCurrency = (number: number) => {
 }
 
 
+
+export function formatTime(iso: string) {
+  return new Date(iso).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+}
+
 export const handleErrorApi = ({
   error,
   setError,

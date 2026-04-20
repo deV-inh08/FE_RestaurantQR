@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { AdminHeader } from "@/src/components/admin/admin-header"
 import { Button } from "@/src/components/ui/button"
 import {
@@ -18,123 +18,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/src/components/ui/table"
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/src/components/ui/pagination"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/src/components/ui/dialog"
-import { Plus, Eye, Pencil, X, Calendar } from "lucide-react"
-import { cn } from "@/src/lib/utils"
+
+import { Calendar, Eye, Pencil, Plus, Search } from "lucide-react"
+import { cn, formatCurrency, formatTime } from "@/src/lib/utils"
 import PaginationV1 from "@/src/components/pagination/pagination_v1"
+import { useGetOrders } from "@/src/queries/useOrder"
+import StatusSelect, { STATUS_LABELS, STATUS_VALUES, OrderStatus, STATUS_STYLES } from "./components/status_select"
+import CreateOrderModal from "./components/addOrder"
+import { STATUS_ORDER_STYLE, StatusBadge, ViewOrderModal } from "./components/viewModel"
+import { EditOrderModal } from "./components/editOrder"
+import { OrderDto } from "@/src/schema/order.schema"
+import TableStatusGrid from "./components/TableStatusGrid"
 
-// Sample table data
-const tables = [
-  { id: 1, status: "occupied", orderCount: 3, guest: "Nguyễn Văn A" },
-  { id: 2, status: "empty", orderCount: 0, guest: null },
-  { id: 3, status: "occupied", orderCount: 2, guest: "Trần Thị B" },
-  { id: 4, status: "reserved", orderCount: 0, guest: "Lê Văn C" },
-  { id: 5, status: "empty", orderCount: 0, guest: null },
-  { id: 6, status: "occupied", orderCount: 5, guest: "Phạm Thị D" },
-  { id: 7, status: "empty", orderCount: 0, guest: null },
-  { id: 8, status: "reserved", orderCount: 0, guest: "Hoàng Văn E" },
-  { id: 9, status: "occupied", orderCount: 1, guest: "Vũ Thị F" },
-  { id: 10, status: "empty", orderCount: 0, guest: null },
-  { id: 11, status: "occupied", orderCount: 4, guest: "Đặng Văn G" },
-  { id: 12, status: "empty", orderCount: 0, guest: null },
-  { id: 13, status: "empty", orderCount: 0, guest: null },
-  { id: 14, status: "reserved", orderCount: 0, guest: "Bùi Thị H" },
-  { id: 15, status: "occupied", orderCount: 2, guest: "Ngô Văn I" },
-]
 
-// Sample orders data
-const orders = [
-  {
-    id: "ORD-001",
-    tableId: 1,
-    guest: "Nguyễn Văn A",
-    items: 3,
-    total: 485000,
-    status: "processing",
-    time: "12:30",
-  },
-  {
-    id: "ORD-002",
-    tableId: 3,
-    guest: "Trần Thị B",
-    items: 2,
-    total: 320000,
-    status: "delivered",
-    time: "12:15",
-  },
-  {
-    id: "ORD-003",
-    tableId: 6,
-    guest: "Phạm Thị D",
-    items: 5,
-    total: 750000,
-    status: "pending",
-    time: "12:45",
-  },
-  {
-    id: "ORD-004",
-    tableId: 9,
-    guest: "Vũ Thị F",
-    items: 1,
-    total: 185000,
-    status: "paid",
-    time: "11:30",
-  },
-  {
-    id: "ORD-005",
-    tableId: 11,
-    guest: "Đặng Văn G",
-    items: 4,
-    total: 620000,
-    status: "processing",
-    time: "12:50",
-  },
-  {
-    id: "ORD-006",
-    tableId: 15,
-    guest: "Ngô Văn I",
-    items: 2,
-    total: 295000,
-    status: "delivered",
-    time: "12:20",
-  },
-  {
-    id: "ORD-007",
-    tableId: 1,
-    guest: "Nguyễn Văn A",
-    items: 1,
-    total: 55000,
-    status: "rejected",
-    time: "12:35",
-  },
-  {
-    id: "ORD-008",
-    tableId: 3,
-    guest: "Trần Thị B",
-    items: 1,
-    total: 95000,
-    status: "pending",
-    time: "12:40",
-  },
-]
 
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("vi-VN").format(price) + "đ"
+function StatusPill({ status }: { status: string }) {
+  return (
+    <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider',
+      STATUS_STYLES[status as OrderStatus] ?? 'bg-white/8 text-foreground')}>
+      {STATUS_LABELS[status as OrderStatus] ?? status}
+    </span>
+  )
 }
+
+
 
 type TableStatus = "empty" | "occupied" | "reserved"
 
@@ -157,438 +64,199 @@ function TableStatusPill({ status }: { status: TableStatus }) {
   )
 }
 
-type OrderStatus = "pending" | "processing" | "delivered" | "paid" | "rejected"
 
-function OrderStatusPill({ status }: { status: OrderStatus }) {
-  const styles: Record<OrderStatus, string> = {
-    pending: "bg-transparent text-foreground border border-foreground",
-    processing: "bg-primary text-primary-foreground",
-    delivered: "bg-[#22c55e] text-white",
-    paid: "bg-[#3860BE] text-white",
-    rejected: "bg-[#ef4444] text-white",
+
+// ─── Main page ──────────────────────────────────────
+export default function OrdersPage() {
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+
+  const [isCreateOpen, setIsCreateOpen] = useState(false)
+  const [createPreselectedTable, setCreatePreselectedTable] = useState<number | undefined>()
+  const [orderToView, setOrderToView] = useState<OrderDto | null>(null)
+  const [orderToEdit, setOrderToEdit] = useState<OrderDto | null>(null)
+
+  const { data, isLoading } = useGetOrders()
+
+  const handleTableClick = (tableId: number) => {
+    setCreatePreselectedTable(tableId)
+    setIsCreateOpen(true)
   }
 
-  return (
-    <span
-      className={cn(
-        "inline-flex px-3 py-1 text-xs font-bold uppercase tracking-wide",
-        styles[status]
-      )}
-    >
-      {status}
-    </span>
-  )
-}
+  const guestItemCount = useMemo(() => {
+    const map: Record<string, number> = {}
+    for (const o of data?.payload.data ?? []) {
+      const key = `${o.tableId}-${o.guestId}`
+      map[key] = (map[key] ?? 0) + 1
+    }
+    return map
+  }, [data])
 
-export default function OrdersPage() {
-  const [selectedTable, setSelectedTable] = useState<number | null>(null)
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [dateFrom, setDateFrom] = useState("")
-  const [dateTo, setDateTo] = useState("")
-  const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false)
+  const getTotal = (o: OrderDto) =>
+    o.dishPrice ? formatCurrency(o.dishPrice * o.quantity) : '—'
 
-  const selectedTableData = tables.find((t) => t.id === selectedTable)
-  const tableOrders = orders.filter((o) => o.tableId === selectedTable)
-
-  const filteredOrders = orders.filter((order) => {
-    if (statusFilter === "all") return true
-    return order.status === statusFilter
-  })
-
+  const orders = useMemo(() => {
+    return (data?.payload.data ?? []).filter(o => {
+      const matchStatus = statusFilter === 'all' || o.status === statusFilter
+      const matchFrom = !dateFrom || new Date(o.createdAt) >= new Date(dateFrom)
+      const matchTo = !dateTo || new Date(o.createdAt) <= new Date(dateTo + 'T23:59:59')
+      return matchStatus && matchFrom && matchTo
+    })
+  }, [data, statusFilter, dateFrom, dateTo])
   return (
     <div className="min-h-screen">
-      <AdminHeader title="Orders" subtitle="Real-time order management" />
+      <AdminHeader title="Orders" subtitle="Quản lý đơn hàng theo thời gian thực" />
+
 
       <div className="p-6">
-        {/* Table Status Grid */}
-        <div className="mb-8">
-          <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-muted-foreground">
-            Table Status
-          </h3>
-          <div className="grid grid-cols-5 gap-3 lg:grid-cols-8 xl:grid-cols-10">
-            {tables.map((table) => (
-              <button
-                key={table.id}
-                onClick={() =>
-                  table.status === "occupied"
-                    ? setSelectedTable(table.id)
-                    : null
-                }
-                className={cn(
-                  "relative flex flex-col items-center justify-center border rounded-md rounded-md border border-border-subtle-subtle-subtle bg-card shadow-card p-4 transition-all",
-                  table.status === "occupied" &&
-                  "cursor-pointer hover:border-primary",
-                  table.status !== "occupied" && "cursor-default opacity-70"
-                )}
-              >
-                <span className="mb-2 text-lg font-bold uppercase text-foreground">
-                  Table {table.id}
-                </span>
-                <TableStatusPill status={table.status as TableStatus} />
-                {table.status === "occupied" && table.orderCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center bg-primary text-xs font-bold text-primary-foreground">
-                    {table.orderCount}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Table Status Grid — clicking a table pre-fills the create modal */}
+        <TableStatusGrid onSelectTable={handleTableClick} />
 
-        {/* Orders Section */}
+        {/* ── Orders section ── */}
         <div>
-          <h3 className="mb-4 text-sm font-bold uppercase tracking-wide text-muted-foreground">
-            Orders
-          </h3>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Date from */}
+              <div className="relative flex items-center">
+                <svg className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                  className="h-10 w-44 rounded-md border border-input-border bg-input pl-10 pr-3 text-sm text-foreground focus:border-primary focus:outline-none [color-scheme:dark]" />
+              </div>
+              <span className="text-sm text-muted-foreground">to</span>
+              <div className="relative flex items-center">
+                <svg className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                  className="h-10 w-44 rounded-md border border-input-border bg-input pl-10 pr-3 text-sm text-foreground focus:border-primary focus:outline-none [color-scheme:dark]" />
+              </div>
 
-          {/* Toolbar */}
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              {/* Date From */}
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="h-10 w-40 border rounded-md rounded-md border border-border-subtle-subtle-subtle bg-card shadow-card pl-10 pr-3 text-sm text-foreground focus:border-primary focus:outline-none [color-scheme:dark]"
-                />
-              </div>
-              <span className="text-muted-foreground">to</span>
-              {/* Date To */}
-              <div className="relative">
-                <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="h-10 w-40 border rounded-md rounded-md border border-border-subtle-subtle-subtle bg-card shadow-card pl-10 pr-3 text-sm text-foreground focus:border-primary focus:outline-none [color-scheme:dark]"
-                />
-              </div>
-              {/* Status Filter */}
+              {/* Status filter */}
               <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-10 w-40 rounded-md rounded-md border border-border-subtle-subtle-subtle bg-card shadow-card text-foreground hover:bg-card focus:ring-0 focus:ring-offset-0">
+                <SelectTrigger className="h-10 w-36 rounded-md border-input-border bg-input text-sm text-foreground focus:ring-0">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
-                <SelectContent className="rounded-md rounded-md border border-border-subtle-subtle-subtle bg-card shadow-card">
-                  <SelectItem
-                    value="all"
-                    className="text-foreground focus:bg-gold-subtle/30 focus:text-foreground"
-                  >
-                    All Status
-                  </SelectItem>
-                  <SelectItem
-                    value="pending"
-                    className="text-foreground focus:bg-gold-subtle/30 focus:text-foreground"
-                  >
-                    Pending
-                  </SelectItem>
-                  <SelectItem
-                    value="processing"
-                    className="text-foreground focus:bg-gold-subtle/30 focus:text-foreground"
-                  >
-                    Processing
-                  </SelectItem>
-                  <SelectItem
-                    value="delivered"
-                    className="text-foreground focus:bg-gold-subtle/30 focus:text-foreground"
-                  >
-                    Delivered
-                  </SelectItem>
-                  <SelectItem
-                    value="paid"
-                    className="text-foreground focus:bg-gold-subtle/30 focus:text-foreground"
-                  >
-                    Paid
-                  </SelectItem>
-                  <SelectItem
-                    value="rejected"
-                    className="text-foreground focus:bg-gold-subtle/30 focus:text-foreground"
-                  >
-                    Rejected
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Create Order Button */}
-            <Button
-              onClick={() => setIsCreateOrderOpen(true)}
-              className="h-10 gap-2 bg-primary px-6 font-bold uppercase tracking-wide text-primary-foreground hover:bg-[#917300]"
-            >
-              <Plus className="h-4 w-4" />
-              Create Order
-            </Button>
-          </div>
-
-          {/* Orders Data Table */}
-          <div className="border rounded-md rounded-md border border-border-subtle-subtle-subtle bg-card shadow-card">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border-subtle hover:bg-transparent">
-                  <TableHead className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Order ID
-                  </TableHead>
-                  <TableHead className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Table
-                  </TableHead>
-                  <TableHead className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Guest
-                  </TableHead>
-                  <TableHead className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Items
-                  </TableHead>
-                  <TableHead className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Total
-                  </TableHead>
-                  <TableHead className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Status
-                  </TableHead>
-                  <TableHead className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Time
-                  </TableHead>
-                  <TableHead className="text-right text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Actions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredOrders.map((order) => (
-                  <TableRow
-                    key={order.id}
-                    className="border-border-subtle transition-colors hover:bg-gold-subtle/30"
-                  >
-                    <TableCell className="font-mono font-medium text-foreground">
-                      {order.id}
-                    </TableCell>
-                    <TableCell className="text-foreground">
-                      Table {order.tableId}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {order.guest}
-                    </TableCell>
-                    <TableCell className="text-foreground">
-                      {order.items} items
-                    </TableCell>
-                    <TableCell className="font-bold text-primary">
-                      {formatPrice(order.total)}
-                    </TableCell>
-                    <TableCell>
-                      <OrderStatusPill status={order.status as OrderStatus} />
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {order.time}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-foreground hover:bg-gold-subtle hover:text-foreground"
-                        >
-                          <Eye className="h-4 w-4" />
-                          <span className="sr-only">View</span>
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-foreground hover:bg-gold-subtle hover:text-foreground"
-                        >
-                          <Pencil className="h-4 w-4" />
-                          <span className="sr-only">Edit</span>
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-
-            {/* Pagination */}
-            <PaginationV1></PaginationV1>
-          </div>
-        </div>
-      </div>
-
-      {/* Table Detail Panel */}
-      <Dialog
-        open={selectedTable !== null}
-        onOpenChange={() => setSelectedTable(null)}
-      >
-        <DialogContent className="max-w-lg rounded-md rounded-md border border-border-subtle-subtle-subtle bg-card shadow-card p-0 sm:rounded-none">
-          <DialogHeader className="border-b border-border-subtle p-6">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-xl font-bold uppercase tracking-tight text-foreground">
-                Table {selectedTable} Details
-              </DialogTitle>
-            </div>
-          </DialogHeader>
-
-          <div className="p-6">
-            {selectedTableData && (
-              <div className="space-y-6">
-                {/* Guest Info */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Guest
-                  </label>
-                  <p className="text-lg font-medium text-foreground">
-                    {selectedTableData.guest}
-                  </p>
-                </div>
-
-                {/* Status */}
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Status
-                  </label>
-                  <div>
-                    <TableStatusPill
-                      status={selectedTableData.status as TableStatus}
-                    />
-                  </div>
-                </div>
-
-                {/* Orders */}
-                <div className="space-y-3">
-                  <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                    Active Orders ({tableOrders.length})
-                  </label>
-                  <div className="space-y-2">
-                    {tableOrders.map((order) => (
-                      <div
-                        key={order.id}
-                        className="flex items-center justify-between rounded-md border border-border-subtle-subtle bg-background p-3"
-                      >
-                        <div>
-                          <p className="font-mono text-sm font-medium text-foreground">
-                            {order.id}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {order.items} items
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-primary">
-                            {formatPrice(order.total)}
-                          </p>
-                          <OrderStatusPill
-                            status={order.status as OrderStatus}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Total */}
-                <div className="border-t border-border-subtle pt-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold uppercase tracking-wide text-muted-foreground">
-                      Total Bill
-                    </span>
-                    <span className="text-2xl font-bold text-primary">
-                      {formatPrice(
-                        tableOrders.reduce((sum, o) => sum + o.total, 0)
-                      )}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <DialogFooter className="border-t border-border-subtle p-6">
-            <Button
-              variant="outline"
-              onClick={() => setSelectedTable(null)}
-              className="border-border-subtle bg-transparent text-foreground hover:bg-gold-subtle/30 hover:text-foreground"
-            >
-              Close
-            </Button>
-            <Button className="bg-primary font-bold uppercase tracking-wide text-primary-foreground hover:bg-[#917300]">
-              Print Bill
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Create Order Modal */}
-      <Dialog open={isCreateOrderOpen} onOpenChange={setIsCreateOrderOpen}>
-        <DialogContent className="max-w-lg rounded-md rounded-md border border-border-subtle-subtle-subtle bg-card shadow-card p-0 sm:rounded-none">
-          <DialogHeader className="border-b border-border-subtle p-6">
-            <DialogTitle className="text-xl font-bold uppercase tracking-tight text-foreground">
-              Create New Order
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-4 p-6">
-            {/* Table Selection */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                Table
-              </label>
-              <Select>
-                <SelectTrigger className="h-10 w-full border-border-subtle bg-background text-foreground hover:bg-background focus:ring-0 focus:ring-offset-0">
-                  <SelectValue placeholder="Select table" />
-                </SelectTrigger>
-                <SelectContent className="rounded-md rounded-md border border-border-subtle-subtle-subtle bg-card shadow-card">
-                  {tables.map((table) => (
-                    <SelectItem
-                      key={table.id}
-                      value={table.id.toString()}
-                      className="text-foreground focus:bg-gold-subtle/30 focus:text-foreground"
-                    >
-                      Table {table.id}{" "}
-                      {table.status !== "empty" && `(${table.status})`}
+                <SelectContent className="rounded-md border-border-subtle bg-surface">
+                  <SelectItem value="all" className="text-foreground focus:bg-gold-subtle">All Status</SelectItem>
+                  {STATUS_VALUES.map(s => (
+                    <SelectItem key={s} value={s} className="text-foreground focus:bg-gold-subtle">
+                      {STATUS_ORDER_STYLE[s].label}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Guest Name */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                Guest Name
-              </label>
-              <input
-                type="text"
-                placeholder="Enter guest name"
-                className="h-10 w-full rounded-md border border-border-subtle-subtle bg-background px-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-              />
-            </div>
-
-            {/* Notes */}
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                Notes
-              </label>
-              <textarea
-                placeholder="Special requests or notes"
-                rows={3}
-                className="w-full resize-none rounded-md border border-border-subtle-subtle bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="border-t border-border-subtle p-6">
+            {/* Create button */}
             <Button
-              variant="outline"
-              onClick={() => setIsCreateOrderOpen(false)}
-              className="border-border-subtle bg-transparent text-foreground hover:bg-gold-subtle/30 hover:text-foreground"
+              onClick={() => { setCreatePreselectedTable(undefined); setIsCreateOpen(true) }}
+              className="h-10 gap-2 rounded-md bg-primary px-5 font-bold uppercase tracking-wide text-black shadow-md hover:shadow-gold"
             >
-              Cancel
-            </Button>
-            <Button
-              onClick={() => setIsCreateOrderOpen(false)}
-              className="bg-primary font-bold uppercase tracking-wide text-primary-foreground hover:bg-[#917300]"
-            >
+              <Plus className="h-4 w-4" />
               Create Order
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+
+          {/* Table */}
+          <div className="rounded-md border border-border-subtle bg-card shadow-card">
+            {isLoading ? (
+              <div className="flex items-center justify-center py-16 text-muted-foreground">Đang tải...</div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border-subtle hover:bg-transparent">
+                    {['ORDER ID', 'TABLE', 'GUEST', 'ITEMS', 'TOTAL', 'STATUS', 'TIME', 'ACTIONS'].map(h => (
+                      <TableHead key={h} className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        {h}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orders.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={8} className="py-16 text-center text-muted-foreground">
+                        Không có đơn hàng nào
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {orders.map(order => {
+                    const guestKey = `${order.tableId}-${order.guestId}`
+                    return (
+                      <TableRow key={order.id} className="border-border-subtle transition-colors hover:bg-gold-subtle/20">
+                        {/* Order ID */}
+                        <TableCell className="font-mono font-bold text-foreground">
+                          ORD-{String(order.id).padStart(3, '0')}
+                        </TableCell>
+                        {/* Table */}
+                        <TableCell className="text-foreground">
+                          Table {order.tableNumber}
+                        </TableCell>
+                        {/* Guest */}
+                        <TableCell className="text-muted-foreground">
+                          {order.guestName}
+                        </TableCell>
+                        {/* Items */}
+                        <TableCell className="text-foreground">
+                          <button
+                            onClick={() => setOrderToView(order)}
+                            className="text-primary underline-offset-2 hover:underline"
+                          >
+                            {guestItemCount[guestKey] ?? 1} item{(guestItemCount[guestKey] ?? 1) > 1 ? 's' : ''}
+                          </button>
+                        </TableCell>
+                        {/* Total */}
+                        <TableCell className="font-bold text-primary">
+                          {getTotal(order)}
+                        </TableCell>
+                        {/* Status */}
+                        <TableCell>
+                          <StatusBadge status={order.status} />
+                        </TableCell>
+                        {/* Time */}
+                        <TableCell className="text-muted-foreground text-sm tabular-nums">
+                          {formatTime(order.createdAt)}
+                        </TableCell>
+                        {/* Actions */}
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setOrderToView(order)}
+                              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-gold-subtle hover:text-foreground"
+                              title="Xem chi tiết"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => setOrderToEdit(order)}
+                              disabled={order.status === 'Cancelled'}
+                              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-gold-subtle hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed"
+                              title="Chỉnh sửa"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </div>
+        </div>
+      </div>
+      {/* Modals */}
+      <CreateOrderModal
+        open={isCreateOpen}
+        preselectedTableId={createPreselectedTable}
+        onClose={() => { setIsCreateOpen(false); setCreatePreselectedTable(undefined) }}
+      />
+      <ViewOrderModal order={orderToView} onClose={() => setOrderToView(null)} />
+      <EditOrderModal order={orderToEdit} onClose={() => setOrderToEdit(null)} />
     </div>
   )
 }

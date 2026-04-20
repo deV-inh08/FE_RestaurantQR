@@ -10,6 +10,7 @@ import {
 import { cn, formatCurrency } from "@/src/lib/utils";
 import { Pencil, Trash2 } from "lucide-react"
 import Image from "next/image";
+import { DishDto } from "@/src/schema/dish.schema";
 
 function StatusPill({ status }: { status: string }) {
     const styles = {
@@ -30,14 +31,7 @@ function StatusPill({ status }: { status: string }) {
     )
 }
 const TableDish = (props: {
-    filteredDishes: {
-        id: number;
-        name: string;
-        category: string;
-        price: number;
-        status: string;
-        image: string;
-    }[]
+    filteredDishes: DishDto[]
 }) => {
     const { filteredDishes } = props
 
@@ -74,7 +68,7 @@ const TableDish = (props: {
                         <TableCell>
                             <div className="relative h-12 w-12 overflow-hidden rounded-md bg-surface">
                                 <Image
-                                    src={dish.image}
+                                    src={`http://localhost:3002${dish.imagePath}`}
                                     alt={dish.name}
                                     fill
                                     className="object-cover"

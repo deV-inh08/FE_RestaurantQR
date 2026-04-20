@@ -48,6 +48,8 @@ export const DishSchema = z.object({
     createdAt: z.coerce.date(),
 })
 
+export type DishDto = z.TypeOf<typeof DishSchema>
+
 export const DishRes = z.object({
     data: DishSchema,
     message: z.string(),

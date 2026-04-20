@@ -10,7 +10,7 @@ export const useGetDishes = () => {
     })
 }
 
-export const useAddDishMutation = () => {
+export const useAddDishMutation = (options?: { onSuccess?: () => void }) => {
     const queryClient = useQueryClient()
     return useMutation({
         mutationFn: (body: CreateDishBodyType) => dishApiRequest.add(body),
@@ -18,6 +18,7 @@ export const useAddDishMutation = () => {
             queryClient.invalidateQueries({
                 queryKey: ['dishes']
             })
+            options?.onSuccess?.()
         }
     })
 }
