@@ -12,7 +12,7 @@ const guestApiRequest = {
      */
     login: (body: GuestLoginBodyType) =>
         http.post<GuestLoginResponseType['data']>(
-            '/api/v1/guest/login',
+            '/guest/login',
             body,
             { service: 'order' }
         ),
@@ -22,7 +22,7 @@ const guestApiRequest = {
      */
     refreshToken: (refreshToken: string) =>
         http.post<{ accessToken: string; refreshToken: string }>(
-            '/api/v1/guest/refresh-token',
+            '/guest/refresh-token',
             { refreshToken },
             { service: 'order' }
         ),
@@ -34,7 +34,7 @@ const guestApiRequest = {
      */
     getMyOrders: (guestAccessToken: string) =>
         http.get<GuestOrderListResponseType['data']>(
-            '/api/v1/order/my-orders',
+            '/order/my-orders',
             {
                 service: 'order',
                 headers: { Authorization: `Bearer ${guestAccessToken}` }
@@ -47,7 +47,7 @@ const guestApiRequest = {
      */
     getTablePublic: (tableId: number) =>
         http.get<{ message: string; data: { id: number; number: number; status: string } }>(
-            `/api/v1/table/${tableId}/public`,
+            `/table/${tableId}/public`,
             { service: 'order' }
         ),
 }

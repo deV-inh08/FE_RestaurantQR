@@ -4,7 +4,7 @@ const nextConfig = {
     ignoreBuildErrors: true,
   },
   images: {
-    domains: ["localhost", "vietgold.vn"],
+    unoptimized: true,
   },
 }
 
