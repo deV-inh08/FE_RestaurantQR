@@ -1,33 +1,66 @@
-import { DishStatus } from "@/src/constants/dish-status";
-import http from "../lib/http";
-import { CreateDishBodyType, DishListResType, DishResType, UpdateDishBodyType } from "../schema/dish.schema";
+import http from '../lib/http'
+import {
+    CreateDishBodyType,
+    DishListResType,
+    DishResType,
+    UpdateDishBodyType,
+} from '../schema/dish.schema'
+import { DishStatus } from '../constants/dish-status'
 
-// Always call Services Backend: Don't allow call Next Server 
 const dishApiRequest = {
-    // get list dishes
-    list: () => http.get<DishListResType>(
-        '/menu/dishes',
-        { next: { tags: ['dishes'] }, service: "menu" },
+    // ─── GET all dishes ───────────────────────────────────────────────────────
+    list: () =>
+        http.get<DishListResType>('/menu/dishes', {
+            next: { tags: ['dishes'] },
+            service: 'menu',
+        }),
 
-    ),
+    // ─── GET single dish ──────────────────────────────────────────────────────
+    getDish: (id: number) =>
+        http.get<DishResType>(`/menu/dishes/${id}`, { service: 'menu' }),
+
+    // ─── CREATE dish (multipart/form-data) ───────────────────────────────────
+    // Backend CreateDishRequest dùng [FromForm] với các field:
+    //   name (required), price (required), description (required),
+    //   category (required), image (optional IFormFile)
+    // Backend KHÔNG có field 'status' trong CreateDishRequest —
+    //   MenuService hardcode Status = DishStatus.Available khi create.
     add: (body: CreateDishBodyType) => {
         const formData = new FormData()
-        formData.append('name', body.name)
+
+        formData.append('name', body.name.trim())
         formData.append('price', String(body.price))
         formData.append('description', body.description ?? '')
-        formData.append('category', body.category)
-        formData.append('status', body.status ?? DishStatus.Available)
+        formData.append('category', body.category) // "MainCourse" | "Dessert" | "Beverage"
+
+        // Chỉ append image khi là File thực sự.
+        // Nếu là string URL (edit case), không gửi — backend giữ nguyên imagePath cũ.
         if (body.image instanceof File) {
-            // Arg 3: filename — server dùng để lưu hoặc log
             formData.append('image', body.image, body.image.name)
         }
 
+        // KHÔNG set Content-Type header ở đây.
+        // http.ts đã handle: khi body là FormData thì để browser tự set
+        // "multipart/form-data; boundary=xxx" — thiếu boundary thì server trả 415.
         return http.post<DishResType>('/menu/dishes', formData, { service: 'menu' })
     },
-    getDish: (id: number) => http.get<DishResType>(`/menu/dishes/${id}`, { service: "menu" }),
-    updateDish: (id: number, body: UpdateDishBodyType) => http.put<DishResType>(`/menu/dishes/${id}`, body, { service: "menu" }),
-    deleteDish: (id: number) => http.delete<DishResType>(`/menu/dishes/${id}`, { service: "menu" }),
-    updateStatusDish: (id: number, body: { status: typeof DishStatus[keyof typeof DishStatus] }) => http.put<DishResType>(`/menu/dishes/${id}/status`, body, { service: "menu" })
+
+    // ─── UPDATE dish ──────────────────────────────────────────────────────────
+    // Backend UpdateDishRequest dùng [FromBody] JSON (không phải [FromForm])
+    // nên gửi JSON bình thường — KHÔNG dùng FormData.
+    updateDish: (id: number, body: UpdateDishBodyType) =>
+        http.put<DishResType>(`/menu/dishes/${id}`, body, { service: 'menu' }),
+
+    // ─── UPDATE status only (PATCH) ───────────────────────────────────────────
+    updateStatusDish: (
+        id: number,
+        body: { status: (typeof DishStatus)[keyof typeof DishStatus] }
+    ) =>
+        http.put<DishResType>(`/menu/dishes/${id}/status`, body, { service: 'menu' }),
+
+    // ─── DELETE dish ──────────────────────────────────────────────────────────
+    deleteDish: (id: number) =>
+        http.delete<DishResType>(`/menu/dishes/${id}`, { service: 'menu' }),
 }
 
 export default dishApiRequest

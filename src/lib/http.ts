@@ -52,31 +52,40 @@ const request = async <TResponse>(
     url: string,
     options?: CustomOptions
 ) => {
-    const { baseUrl, ...restOptions } = options ?? {}
+    // const { baseUrl, ...restOptions } = options ?? {}
 
+    const { baseUrl, service, body: rawBody, headers: rawHeaders, ...restFetchOptions } = options ?? {}
 
+    // ─── 2. Xác định body và Content-Type ────────────────────────────────────
     // Hầu hết các request body có dạng: Json, Form --> 90%
     // 10 % còn lại là Text, XML, Binary,....
     // Code này chưa tối ưu, còn thiếu check 10 % còn lại.
-    let body: any;
-    if (restOptions.body instanceof FormData) {
-        body = restOptions.body;
-    } else {
-        body = restOptions.body ? JSON.stringify(restOptions.body) : undefined;
-    }
-    const baseHeaders: Record<string, string> =
-        body instanceof FormData ? {} : { 'Content-Type': 'application/json' }
 
+    // Khi body là FormData:
+    //   - KHÔNG set Content-Type thủ công
+    //   - Browser sẽ tự set "multipart/form-data; boundary=<uuid>" 
+    //   - Nếu ta set thủ công thì thiếu boundary → server reject → 415
+    // Khi body là object/primitive:
+    //   - Stringify thành JSON
+    //   - Set Content-Type: application/json
+    const isFormData = rawBody instanceof FormData
 
+    const body: BodyInit | undefined = isFormData
+        ? rawBody
+        : rawBody != null
+            ? JSON.stringify(rawBody)
+            : undefined
 
-    console.log(`_______________________________${body}`)
-    console.log(`_______________________________${baseHeaders}`)
-
+    const baseHeaders: Record<string, string> = isFormData
+        ? {}
+        : { 'Content-Type': 'application/json' }
     // Auto-attach access token when calling backend services directly (cross-origin).
     // When baseUrl === '' (Next.js route handler), cookies handle auth automatically.
     const isDirectBackendCall = baseUrl !== ''
     const accessToken = getAccessTokenFromLocalStorage()
-    if (isDirectBackendCall && accessToken && !(restOptions.headers as any)?.Authorization) {
+    const existingAuthHeader = (rawHeaders as Record<string, string>)?.['Authorization']
+
+    if (isDirectBackendCall && accessToken && !existingAuthHeader) {
         baseHeaders['Authorization'] = `Bearer ${accessToken}`
     }
 
@@ -89,8 +98,8 @@ const request = async <TResponse>(
 
     console.log(`fullUrl_______________________: ${fullUrl}`);
     const res = await fetch(fullUrl, {
-        ...restOptions,
-        headers: { ...baseHeaders, ...restOptions.headers },
+        ...restFetchOptions,
+        headers: { ...baseHeaders, ...(rawHeaders as Record<string, string> ?? {}) },
         body,
         method
     })
@@ -115,10 +124,11 @@ const request = async <TResponse>(
 
         // if error is UnAuthorized
         if (res.status === HTTP_STATUS.UNAUTHORIZED) {
-            // 
-            const accessToken = (restOptions.headers as any)
-                ?.Authorization?.split('Bearer ')[1] ?? null
-            await handleUnauthorized?.(accessToken)
+            const tokenFromHeader = (rawHeaders as Record<string, string>)
+                ?.['Authorization']
+                ?.split('Bearer ')[1] ?? null
+            await handleUnauthorized?.(tokenFromHeader)
+
         }
 
         throw new HttpError(res.status, payload as any)

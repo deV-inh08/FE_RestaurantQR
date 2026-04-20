@@ -1,46 +1,69 @@
-import { CategoryStatusValues, DishStatusValues } from '../constants/dish-status'
 import z from 'zod'
+import { CategoryStatusValues, DishStatusValues } from '../constants/dish-status'
 
+// ─── Create ───────────────────────────────────────────────────────────────────
+// Gửi multipart/form-data → image có thể là File (upload mới) hoặc undefined
 export const CreateDishBody = z.object({
-    name: z.string().min(1).max(256),
-    price: z.string().max(10000),
-    description: z.string().max(10000),
-    image: z.union([z.string().url(), z.instanceof(File)]),
+    name: z.string().min(1, 'Tên món không được để trống').max(256),
+    price: z.union([z.string(), z.number()]).refine(
+        (val) => Number(val) > 0,
+        { message: 'Giá phải lớn hơn 0' }
+    ),
+    description: z.string().max(1000).optional().default(''),
+    image: z.union([
+        z.instanceof(File),
+        z.string().url(),
+        z.null(),
+        z.undefined(),
+    ]).optional(),
     category: z.enum(CategoryStatusValues),
-    status: z.enum(DishStatusValues).optional()
+    // status không có trong CreateDishRequest backend — backend hardcode Available
+    // Để ở đây cho FE nhưng KHÔNG gửi lên backend
+    status: z.enum(DishStatusValues).optional(),
 })
 
 export type CreateDishBodyType = z.TypeOf<typeof CreateDishBody>
 
+// ─── Update ───────────────────────────────────────────────────────────────────
+// Gửi JSON ([FromBody]) → image là string URL hoặc null (không upload file)
+export const UpdateDishBody = z.object({
+    name: z.string().min(1).max(256),
+    price: z.number().int().positive('Giá phải lớn hơn 0'),
+    description: z.string().max(1000).optional().default(''),
+    imagePath: z.string().url().nullable().optional(),  // URL string, match với backend field
+    category: z.enum(CategoryStatusValues),
+})
+
+export type UpdateDishBodyType = z.TypeOf<typeof UpdateDishBody>
+
+// ─── Response ─────────────────────────────────────────────────────────────────
 export const DishSchema = z.object({
     id: z.number(),
     name: z.string(),
     price: z.coerce.number(),
     description: z.string(),
-    image: z.string(),
+    imagePath: z.string().nullable().optional(),  // match với backend DishDto field name
     category: z.enum(CategoryStatusValues),
     status: z.enum(DishStatusValues),
-    createdAt: z.date(),
-    updatedAt: z.date()
+    createdAt: z.coerce.date(),
 })
 
 export const DishRes = z.object({
     data: DishSchema,
-    message: z.string()
+    message: z.string(),
 })
 
 export type DishResType = z.TypeOf<typeof DishRes>
 
 export const DishListRes = z.object({
     data: z.array(DishSchema),
-    message: z.string()
+    message: z.string(),
 })
 
 export type DishListResType = z.TypeOf<typeof DishListRes>
 
-export const UpdateDishBody = CreateDishBody
-export type UpdateDishBodyType = CreateDishBodyType
 export const DishParams = z.object({
-    id: z.coerce.number()
+    id: z.coerce.number(),
 })
+
 export type DishParamsType = z.TypeOf<typeof DishParams>
