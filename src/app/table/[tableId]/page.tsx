@@ -1,220 +1,205 @@
-"use client"
+'use client'
 
-import { useState } from "react"
-import Image from "next/image"
-import Link from "next/link"
-import { useParams } from "next/navigation"
-import {
-  Minus, Plus
-} from "lucide-react"
-import { cn } from "@/src/lib/utils"
+import { useEffect, useState } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { useParams, useRouter } from 'next/navigation'
+import { Minus, Plus, Loader2 } from 'lucide-react'
+import { useMutation } from '@tanstack/react-query'
+import { toast } from 'sonner'
+import { cn, formatCurrency, handleErrorApi } from '@/src/lib/utils'
+import { getGuestAccessToken, getGuestInfo, isGuestLoggedIn } from '@/src/lib/guest-session'
+import { useGetDishes } from '@/src/queries/useDish'
+import guestApiRequest from '@/src/apiRequests/guest.request'
+import http from '@/src/lib/http'
+import envConfig from '@/src/config'
 
-// Sample menu data
-const menuItems = [
-  {
-    id: 1,
-    name: "Phở Bò Đặc Biệt",
-    description: "Premium beef pho with rare steak, brisket, and tendon",
-    price: 185000,
-    image: "/placeholder.svg?height=80&width=80",
-    available: true,
-    category: "Soup",
-  },
-  {
-    id: 2,
-    name: "Bún Chả Hà Nội",
-    description: "Grilled pork patties with vermicelli and herbs",
-    price: 165000,
-    image: "/placeholder.svg?height=80&width=80",
-    available: true,
-    category: "Noodles",
-  },
-  {
-    id: 3,
-    name: "Bánh Mì Thịt Nướng",
-    description: "Crispy baguette with grilled pork and pickled vegetables",
-    price: 95000,
-    image: "/placeholder.svg?height=80&width=80",
-    available: false,
-    category: "Sandwiches",
-  },
-  {
-    id: 4,
-    name: "Cơm Tấm Sườn Bì",
-    description: "Broken rice with grilled pork chop and shredded pork skin",
-    price: 145000,
-    image: "/placeholder.svg?height=80&width=80",
-    available: true,
-    category: "Rice",
-  },
-  {
-    id: 5,
-    name: "Gỏi Cuốn Tôm Thịt",
-    description: "Fresh spring rolls with shrimp, pork, and herbs",
-    price: 85000,
-    image: "/placeholder.svg?height=80&width=80",
-    available: true,
-    category: "Appetizers",
-  },
-  {
-    id: 6,
-    name: "Bò Lúc Lắc",
-    description: "Shaking beef with garlic, pepper, and vegetables",
-    price: 245000,
-    image: "/placeholder.svg?height=80&width=80",
-    available: true,
-    category: "Main Course",
-  },
-  {
-    id: 7,
-    name: "Chả Giò Chiên",
-    description: "Crispy fried spring rolls with pork and vegetables",
-    price: 75000,
-    image: "/placeholder.svg?height=80&width=80",
-    available: true,
-    category: "Appetizers",
-  },
-  {
-    id: 8,
-    name: "Cà Phê Sữa Đá",
-    description: "Vietnamese iced coffee with condensed milk",
-    price: 55000,
-    image: "/placeholder.svg?height=80&width=80",
-    available: true,
-    category: "Beverages",
-  },
-]
-
-function formatPrice(price: number) {
-  return new Intl.NumberFormat("vi-VN").format(price) + "đ"
+// ─── Category labels ────────────────────────────────
+const CATEGORY_LABELS: Record<string, string> = {
+  MainCourse: 'Món chính',
+  Dessert: 'Tráng miệng',
+  Beverage: 'Đồ uống',
 }
 
-interface CartItem {
-  id: number
-  quantity: number
-}
+// ─── Types ──────────────────────────────────────────
+interface CartItem { dishId: number; quantity: number }
 
 export default function GuestMenuPage() {
   const params = useParams()
+  const router = useRouter()
   const tableId = params.tableId as string
+
   const [cart, setCart] = useState<CartItem[]>([])
+  const [activeCategory, setActiveCategory] = useState('all')
 
-  const getItemQuantity = (itemId: number) => {
-    const item = cart.find((i) => i.id === itemId)
-    return item?.quantity || 0
-  }
+  // Guard
+  useEffect(() => {
+    if (!isGuestLoggedIn()) router.replace(`/table/${tableId}/welcome`)
+  }, [tableId, router])
 
-  const updateQuantity = (itemId: number, delta: number) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.id === itemId)
+  // Fetch menu từ Menu.API — dùng hook đã có, không viết lại
+  const { data, isLoading } = useGetDishes()
+  const allDishes = data?.payload.data ?? []
+  const availableDishes = allDishes.filter(d => d.status === 'Available')
+  const categories = ['all', ...Array.from(new Set(availableDishes.map(d => d.category as string)))]
+  const filteredDishes = activeCategory === 'all'
+    ? availableDishes
+    : availableDishes.filter(d => d.category === activeCategory)
+
+  // ── Cart helpers ────────────────────────────────
+  const getQty = (dishId: number) => cart.find(i => i.dishId === dishId)?.quantity ?? 0
+
+  const updateQty = (dishId: number, delta: number) => {
+    setCart(prev => {
+      const existing = prev.find(i => i.dishId === dishId)
       if (existing) {
         const newQty = existing.quantity + delta
-        if (newQty <= 0) {
-          return prev.filter((i) => i.id !== itemId)
-        }
-        return prev.map((i) =>
-          i.id === itemId ? { ...i, quantity: newQty } : i
-        )
+        if (newQty <= 0) return prev.filter(i => i.dishId !== dishId)
+        return prev.map(i => i.dishId === dishId ? { ...i, quantity: newQty } : i)
       }
-      if (delta > 0) {
-        return [...prev, { id: itemId, quantity: 1 }]
-      }
-      return prev
+      return delta > 0 ? [...prev, { dishId, quantity: 1 }] : prev
     })
   }
 
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0)
-  const totalPrice = cart.reduce((sum, item) => {
-    const menuItem = menuItems.find((m) => m.id === item.id)
-    return sum + (menuItem?.price || 0) * item.quantity
+  const totalItems = cart.reduce((s, i) => s + i.quantity, 0)
+  const totalPrice = cart.reduce((s, i) => {
+    const dish = availableDishes.find(d => d.id === i.dishId)
+    return s + (dish?.price ?? 0) * i.quantity
   }, 0)
 
+  // ── Place order mutation ─────────────────────────
+  // Dùng useMutation trực tiếp vì đây là guest action riêng biệt,
+  // không share với admin orderApiRequest
+  const orderMutation = useMutation({
+    mutationFn: async (items: CartItem[]) => {
+      const accessToken = getGuestAccessToken()
+      if (!accessToken) throw new Error('Chưa đăng nhập')
+
+      // Với mỗi món: lấy snapshotId mới nhất → POST /order
+      // Promise.all để gọi song song, không tuần tự
+      await Promise.all(items.map(async item => {
+        // Lấy snapshot mới nhất của dish này từ Menu.API
+        const snapshotRes = await http.get<{ message: string; data: { id: number } }>(
+          `/api/v1/dish-snapshot/by-dish/${item.dishId}`,
+          { service: 'menu' }
+        )
+        const snapshotId = snapshotRes.payload.data.id
+
+        // Tạo order với Guest JWT
+        return http.post(
+          '/api/v1/order',
+          { dishSnapshotId: snapshotId, quantity: item.quantity },
+          {
+            service: 'order',
+            headers: { Authorization: `Bearer ${accessToken}` }
+          }
+        )
+      }))
+    },
+    onSuccess: () => {
+      toast.success(`Đã đặt ${totalItems} món!`)
+      setCart([])
+    },
+    onError: (error: any) => {
+      if (error?.status === 401) {
+        toast.error('Phiên đã hết hạn. Vui lòng quét QR lại.')
+        router.replace(`/table/${tableId}/welcome`)
+      } else {
+        handleErrorApi({ error })
+      }
+    }
+  })
+
+  const guestInfo = getGuestInfo()
+
   return (
-    <div className="flex min-h-screen flex-col pb-24">
+    <div className="flex min-h-screen flex-col pb-32">
       {/* Header */}
-      <header className="sticky top-0 z-10 border-b border-border-subtle bg-background px-4 py-6 text-center">
-        <h1 className="text-2xl font-bold uppercase tracking-wide text-foreground">
-          Viet Gold
-        </h1>
-        <p className="mt-1 text-sm font-bold uppercase tracking-wider text-primary">
-          Table {tableId}
-        </p>
+      <header className="sticky top-0 z-10 border-b border-border-subtle bg-background px-4 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex-1 text-center">
+            <h1 className="text-xl font-bold uppercase tracking-wide text-foreground">Viet Gold</h1>
+            <p className="text-xs font-bold uppercase tracking-wider text-primary">
+              Bàn {tableId}{guestInfo ? ` · ${guestInfo.name}` : ''}
+            </p>
+          </div>
+          <Link
+            href={`/table/${tableId}/orders`}
+            className="shrink-0 rounded-md border border-border-subtle bg-card px-3 py-1.5 text-xs font-bold uppercase tracking-wider text-foreground hover:bg-gold-subtle shadow-card"
+          >
+            Đơn của tôi
+          </Link>
+        </div>
       </header>
 
-      {/* Menu Items */}
+      {/* Category tabs */}
+      <div className="flex gap-2 overflow-x-auto px-4 py-3 no-scrollbar">
+        {categories.map(cat => (
+          <button key={cat} onClick={() => setActiveCategory(cat)}
+            className={cn(
+              'shrink-0 rounded-full px-4 py-1.5 text-xs font-bold uppercase tracking-wider transition-all',
+              activeCategory === cat
+                ? 'bg-primary text-primary-foreground shadow-md'
+                : 'border border-border-subtle bg-card text-muted-foreground hover:bg-gold-subtle hover:text-foreground'
+            )}>
+            {cat === 'all' ? 'Tất cả' : (CATEGORY_LABELS[cat] ?? cat)}
+          </button>
+        ))}
+      </div>
+
+      {/* Menu items */}
       <div className="flex flex-col gap-3 px-4">
-        {menuItems.map((item) => {
-          const quantity = getItemQuantity(item.id)
-          const isUnavailable = !item.available
+        {isLoading && (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-6 w-6 animate-spin text-primary" />
+          </div>
+        )}
+        {!isLoading && filteredDishes.length === 0 && (
+          <p className="py-12 text-center text-sm text-muted-foreground">Không có món trong danh mục này</p>
+        )}
+        {filteredDishes.map(dish => {
+          const qty = getQty(dish.id)
+          // imagePath có thể là relative path hoặc full URL
+          const imgSrc = dish.imagePath
+            ? dish.imagePath.startsWith('http')
+              ? dish.imagePath
+              : `${envConfig.NEXT_PUBLIC_API_MENU}${dish.imagePath}`
+            : null
 
           return (
-            <div
-              key={item.id}
-              className={cn(
-                "relative flex gap-4 rounded-md border border-border-subtle bg-card p-4 shadow-card transition-all hover:border-gold-border",
-                isUnavailable && "opacity-50"
-              )}
-            >
-              {/* Unavailable Overlay */}
-              {isUnavailable && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/60 rounded-md">
-                  <span className="text-sm font-bold uppercase tracking-wider text-foreground">
-                    Unavailable
-                  </span>
-                </div>
-              )}
-
+            <div key={dish.id}
+              className="flex gap-4 rounded-md border border-border-subtle bg-card p-4 shadow-card transition-all hover:border-gold-border">
               {/* Image */}
               <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md bg-surface">
-                <Image
-                  src={item.image}
-                  alt={item.name}
-                  fill
-                  className="object-cover"
-                />
+                {imgSrc ? (
+                  <Image src={imgSrc} alt={dish.name} fill className="object-cover" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-2xl">🍽️</div>
+                )}
               </div>
 
               {/* Info */}
               <div className="flex flex-1 flex-col justify-between">
                 <div>
-                  <h3 className="font-bold uppercase tracking-wide text-foreground">
-                    {item.name}
-                  </h3>
-                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                    {item.description}
-                  </p>
+                  <h3 className="text-sm font-bold uppercase tracking-wide text-foreground">{dish.name}</h3>
+                  {dish.description && (
+                    <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{dish.description}</p>
+                  )}
                 </div>
                 <div className="mt-2 flex items-center justify-between">
-                  <span className="font-bold text-primary">
-                    {formatPrice(item.price)}
-                  </span>
-
-                  {/* Quantity Stepper */}
-                  {!isUnavailable && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => updateQuantity(item.id, -1)}
-                        disabled={quantity === 0}
-                        className={cn(
-                          "flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground transition-all",
-                          quantity === 0
-                            ? "cursor-not-allowed opacity-50"
-                            : "hover:shadow-gold"
-                        )}
-                      >
-                        <Minus className="h-4 w-4" />
-                      </button>
-                      <span className="w-6 text-center font-bold text-foreground">
-                        {quantity}
-                      </span>
-                      <button
-                        onClick={() => updateQuantity(item.id, 1)}
-                        className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground transition-all hover:shadow-gold"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
+                  <span className="text-sm font-bold text-primary">{formatCurrency(dish.price)}</span>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => updateQty(dish.id, -1)} disabled={qty === 0}
+                      className={cn('flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground transition-all',
+                        qty === 0 ? 'cursor-not-allowed opacity-40' : 'hover:shadow-gold')}>
+                      <Minus className="h-4 w-4" />
+                    </button>
+                    <span className="w-6 text-center text-sm font-bold text-foreground">{qty}</span>
+                    <button onClick={() => updateQty(dish.id, 1)}
+                      className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground transition-all hover:shadow-gold">
+                      <Plus className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -222,35 +207,26 @@ export default function GuestMenuPage() {
         })}
       </div>
 
-      {/* Fixed Bottom Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-gold-border bg-background/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[440px] items-center justify-between px-4 py-4">
-          <button
-            disabled={totalItems === 0}
-            className={cn(
-              "flex-1 rounded-md py-3 font-bold uppercase tracking-wide transition-all shadow-md",
-              totalItems > 0
-                ? "bg-primary text-primary-foreground hover:shadow-gold"
-                : "cursor-not-allowed bg-muted text-muted-foreground opacity-50"
-            )}
-          >
-            Order {totalItems} {totalItems === 1 ? "Item" : "Items"}
-          </button>
-          <div className="ml-4 text-right">
-            <span className="text-lg font-bold text-foreground">
-              {formatPrice(totalPrice)}
-            </span>
+      {/* Order bar */}
+      {totalItems > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-gold-border bg-background/95 backdrop-blur">
+          <div className="mx-auto flex max-w-[440px] items-center justify-between gap-4 px-4 py-4">
+            <div>
+              <p className="text-xs text-muted-foreground">{totalItems} món</p>
+              <p className="font-bold text-primary">{formatCurrency(totalPrice)}</p>
+            </div>
+            <button
+              onClick={() => orderMutation.mutate(cart)}
+              disabled={orderMutation.isPending}
+              className="flex flex-1 items-center justify-center gap-2 rounded-md bg-primary py-3 font-bold uppercase tracking-wide text-primary-foreground shadow-md hover:shadow-gold disabled:opacity-60">
+              {orderMutation.isPending
+                ? <><Loader2 className="h-4 w-4 animate-spin" />Đang đặt...</>
+                : `Đặt món (${totalItems})`
+              }
+            </button>
           </div>
         </div>
-      </div>
-
-      {/* Link to My Orders */}
-      <Link
-        href={`/table/${tableId}/orders`}
-        className="fixed right-4 top-20 rounded-md border border-border-subtle bg-card px-4 py-2 text-xs font-bold uppercase tracking-wider text-foreground transition-all hover:bg-gold-subtle shadow-card"
-      >
-        My Orders
-      </Link>
+      )}
     </div>
   )
 }
