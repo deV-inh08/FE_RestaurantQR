@@ -1,42 +1,98 @@
 "use client"
 
 import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { toast } from "sonner"
 import { AdminHeader } from "@/src/components/admin/admin-header"
 import { Button } from "@/src/components/ui/button"
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormMessage,
+} from "@/src/components/ui/form"
 import { Eye, EyeOff, Camera } from "lucide-react"
+import { ChangePasswordBody, ChangePasswordBodyType } from "@/src/schema/account.schema"
+import { useChangePasswordMutation, useGetMe, useUpdateMeMutation } from "@/src/queries/useAccount"
+import { handleErrorApi } from "@/src/lib/utils"
+import { useAppProviderStore } from "@/src/components/app-provider"
+import { useRouter } from "next/navigation"
+import authApiRequest from "@/src/apiRequests/auth.request"
+import { removeTokensFromLS } from "@/src/lib/utils"
 
 export default function SettingsPage() {
+  const router = useRouter()
+  const setRole = useAppProviderStore((state) => state.setRole)
+
   const [showCurrentPassword, setShowCurrentPassword] = useState(false)
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isHoveringAvatar, setIsHoveringAvatar] = useState(false)
 
-  const [profile, setProfile] = useState({
-    name: "Admin User",
-    email: "admin@vietgold.com",
+  // ─── Fetch current user ──────────────────────────────────────────────────────
+  const { data: meData } = useGetMe()
+  const me = meData?.payload.data
+
+  // ─── Update profile mutation ─────────────────────────────────────────────────
+  const updateMeMutation = useUpdateMeMutation()
+
+  const [profileName, setProfileName] = useState("")
+
+  // Sync name from server once loaded
+  const displayName = profileName || me?.name || ""
+
+  const handleSaveProfile = async () => {
+    if (!displayName.trim()) return
+    try {
+      await updateMeMutation.mutateAsync({ name: displayName.trim(), avatar: me?.avatar ?? null })
+      toast.success("Đã cập nhật hồ sơ")
+    } catch (error) {
+      handleErrorApi({ error })
+    }
+  }
+
+  // ─── Change password form ────────────────────────────────────────────────────
+  // agents.md: PUT /account/change-password
+  // On success, backend REVOKES ALL refresh tokens → must logout client too
+  const changePasswordMutation = useChangePasswordMutation()
+
+  const form = useForm<ChangePasswordBodyType>({
+    resolver: zodResolver(ChangePasswordBody),
+    defaultValues: { oldPassword: "", newPassword: "", confirmPassword: "" },
   })
 
-  const [passwords, setPasswords] = useState({
-    current: "",
-    new: "",
-    confirm: "",
-  })
+  const onSubmitPassword = async (values: ChangePasswordBodyType) => {
+    try {
+      const result = await changePasswordMutation.mutateAsync(values)
+      toast.success(result.payload.message ?? "Đổi mật khẩu thành công")
+      form.reset()
+
+      // Backend revokes ALL refresh tokens on change-password (agents.md §3.2)
+      // → must logout client to avoid stale tokens
+      await authApiRequest.logout()
+      removeTokensFromLS()
+      setRole(undefined)
+      router.push("/login")
+    } catch (error) {
+      handleErrorApi({ error, setError: form.setError })
+    }
+  }
 
   return (
     <div className="min-h-screen">
-      <AdminHeader
-        title="Settings"
-        subtitle="Update profile and preferences"
-      />
+      <AdminHeader title="Settings" subtitle="Cập nhật hồ sơ và bảo mật" />
+
       <div className="p-6">
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Profile Card */}
+
+          {/* ── Profile Card ─────────────────────────────────────────────────── */}
           <div className="rounded-md border border-border-subtle bg-card p-6 shadow-card">
             <h2 className="mb-6 text-lg font-bold uppercase tracking-wide text-foreground">
               Profile
             </h2>
 
-            {/* Avatar Section */}
+            {/* Avatar */}
             <div className="mb-6 flex justify-center">
               <div
                 className="relative h-[120px] w-[120px] cursor-pointer rounded-md"
@@ -45,10 +101,9 @@ export default function SettingsPage() {
               >
                 <div className="h-full w-full rounded-md bg-primary">
                   <div className="flex h-full w-full items-center justify-center text-4xl font-bold text-primary-foreground">
-                    AU
+                    {me?.name?.slice(0, 2).toUpperCase() ?? "AD"}
                   </div>
                 </div>
-                {/* Hover Overlay */}
                 <div
                   className={`absolute inset-0 flex flex-col items-center justify-center rounded-md bg-black/70 transition-opacity ${isHoveringAvatar ? "opacity-100" : "opacity-0"
                     }`}
@@ -61,143 +116,163 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* Name Input */}
+            {/* Name */}
             <div className="mb-4">
               <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Name
+                Họ tên
               </label>
               <input
                 type="text"
-                value={profile.name}
-                onChange={(e) =>
-                  setProfile({ ...profile, name: e.target.value })
-                }
+                value={displayName}
+                defaultValue={me?.name}
+                onChange={(e) => setProfileName(e.target.value)}
                 className="w-full rounded-md border border-input-border bg-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:border-primary focus:ring-2 focus:ring-gold-primary/20 focus:outline-none"
-                placeholder="Enter your name"
+                placeholder="Nhập họ tên"
               />
             </div>
 
-            {/* Email Input (Read-only) */}
+            {/* Email — read-only: change email = new identity (agents.md §3.3) */}
             <div className="mb-6">
               <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
                 Email
+                <span className="ml-2 text-[10px] font-normal text-muted-foreground/60 lowercase tracking-normal">
+                  (không thể thay đổi)
+                </span>
               </label>
               <input
                 type="email"
-                value={profile.email}
+                value={me?.email ?? ""}
+                defaultValue={me?.email}
                 readOnly
-                className="w-full rounded-md border border-input-border bg-input px-4 py-3 text-sm text-muted-foreground cursor-not-allowed"
+                className="w-full cursor-not-allowed rounded-md border border-input-border bg-input px-4 py-3 text-sm text-muted-foreground"
               />
             </div>
 
-            {/* Save Button */}
-            <Button className="w-full rounded-md bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground shadow-md transition-all hover:shadow-gold">
-              Save Changes
+            <Button
+              onClick={handleSaveProfile}
+              disabled={updateMeMutation.isPending}
+              className="w-full rounded-md bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground shadow-md transition-all hover:shadow-gold"
+            >
+              {updateMeMutation.isPending ? "Đang lưu..." : "Lưu thay đổi"}
             </Button>
           </div>
 
-          {/* Security Card */}
+          {/* ── Security Card ─────────────────────────────────────────────────── */}
           <div className="rounded-md border border-border-subtle bg-card p-6 shadow-card">
             <h2 className="mb-6 text-lg font-bold uppercase tracking-wide text-foreground">
               Security
             </h2>
 
+            {/* Warning banner */}
+            <div className="mb-4 rounded-md border border-amber-500/20 bg-amber-500/8 px-4 py-3 text-xs text-amber-400">
+              Sau khi đổi mật khẩu, bạn sẽ bị đăng xuất khỏi tất cả thiết bị.
+            </div>
+
             <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">
-              Change Password
+              Đổi mật khẩu
             </h3>
 
-            {/* Current Password */}
-            <div className="mb-4">
-              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Current Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showCurrentPassword ? "text" : "password"}
-                  value={passwords.current}
-                  onChange={(e) =>
-                    setPasswords({ ...passwords, current: e.target.value })
-                  }
-                  className="w-full rounded-md border border-input-border bg-input px-4 py-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:border-primary focus:ring-2 focus:ring-gold-primary/20 focus:outline-none"
-                  placeholder="Enter current password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showCurrentPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </div>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmitPassword)} noValidate className="space-y-4">
 
-            {/* New Password */}
-            <div className="mb-4">
-              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                New Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showNewPassword ? "text" : "password"}
-                  value={passwords.new}
-                  onChange={(e) =>
-                    setPasswords({ ...passwords, new: e.target.value })
-                  }
-                  className="w-full rounded-md border border-input-border bg-input px-4 py-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:border-primary focus:ring-2 focus:ring-gold-primary/20 focus:outline-none"
-                  placeholder="Enter new password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showNewPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
+                {/* Old password */}
+                <FormField
+                  control={form.control}
+                  name="oldPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Mật khẩu hiện tại
+                      </label>
+                      <div className="relative">
+                        <input
+                          {...field}
+                          type={showCurrentPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          className="w-full rounded-md border border-input-border bg-input px-4 py-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:border-primary focus:ring-2 focus:ring-gold-primary/20 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </button>
-              </div>
-            </div>
-
-            {/* Confirm New Password */}
-            <div className="mb-6">
-              <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                Confirm New Password
-              </label>
-              <div className="relative">
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={passwords.confirm}
-                  onChange={(e) =>
-                    setPasswords({ ...passwords, confirm: e.target.value })
-                  }
-                  className="w-full rounded-md border border-input-border bg-input px-4 py-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:border-primary focus:ring-2 focus:ring-gold-primary/20 focus:outline-none"
-                  placeholder="Confirm new password"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-            </div>
 
-            {/* Update Password Button */}
-            <Button className="w-full rounded-md bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground shadow-md transition-all hover:shadow-gold">
-              Update Password
-            </Button>
+                {/* New password */}
+                <FormField
+                  control={form.control}
+                  name="newPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Mật khẩu mới
+                      </label>
+                      <div className="relative">
+                        <input
+                          {...field}
+                          type={showNewPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          className="w-full rounded-md border border-input-border bg-input px-4 py-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:border-primary focus:ring-2 focus:ring-gold-primary/20 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Confirm password */}
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Xác nhận mật khẩu mới
+                      </label>
+                      <div className="relative">
+                        <input
+                          {...field}
+                          type={showConfirmPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          className="w-full rounded-md border border-input-border bg-input px-4 py-3 pr-10 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:border-primary focus:ring-2 focus:ring-gold-primary/20 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button
+                  type="submit"
+                  disabled={changePasswordMutation.isPending}
+                  className="w-full rounded-md bg-primary py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground shadow-md transition-all hover:shadow-gold"
+                >
+                  {changePasswordMutation.isPending ? "Đang cập nhật..." : "Cập nhật mật khẩu"}
+                </Button>
+              </form>
+            </Form>
           </div>
+
         </div>
       </div>
     </div>

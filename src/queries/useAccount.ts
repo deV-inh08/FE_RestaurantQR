@@ -8,9 +8,9 @@ import {
 } from '../schema/account.schema'
 
 export const accountKeys = {
-    all: ['accounts'] as const,
-    detail: (id: number) => ['accounts', id] as const,
-    me: ['accounts', 'me'] as const
+    all: ['account'] as const,
+    detail: (id: number) => ['account', id] as const,
+    me: ['account', 'me'] as const
 }
 
 // ─── Queries ───────────────────────────────────────

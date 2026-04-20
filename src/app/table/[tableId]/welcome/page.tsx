@@ -24,10 +24,14 @@ export default function GuestLoginPage() {
   }, [tableId, router])
 
   // Fetch table public info — lấy tableNumber và kiểm tra status
-  const { data: tableData, isLoading: isLoadingTable, error: tableError } =
-    useGetTablePublic(tableId)
+  const {
+    data: tableData,
+    isLoading: isLoadingTable,
+    error: tableError } = useGetTablePublic(tableId)
 
   const table = tableData?.payload.data
+
+
   const isTableUnavailable = table && table.status === 'Hidden'
 
   // Login mutation
@@ -36,19 +40,17 @@ export default function GuestLoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!name.trim() || !table) return
-
+    if (table.status !== "Available") toast.error('Bàn này hiện không khả dụng. Vui lòng liên hệ nhân viên.')
     try {
       const result = await loginMutation.mutateAsync({
         tableNumber: table.number,
         name: name.trim()
       })
-
       const { guest, accessToken, refreshToken } = result.payload
 
       // Lưu Guest JWT vào sessionStorage (tách biệt với admin localStorage)
       setGuestTokens(accessToken, refreshToken)
       setGuestInfo(guest.name, guest.tableNumber)
-
       router.push(`/table/${tableId}`)
     } catch (error) {
       handleErrorApi({ error })

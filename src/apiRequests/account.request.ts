@@ -23,15 +23,17 @@ const accountApiRequest = {
 
     // ─── Profile (self) ──────────────────────────────
     getMe: () =>
-        http.get<AccountResType>('/auth/accounts/me', { service: 'identity' }),
+        http.get<AccountResType>('/account/me', { service: 'identity' }),
 
     updateMe: (body: UpdateProfileBodyType) =>
-        http.put<AccountResType>('/auth/accounts/me', body, { service: 'identity' }),
+        http.put<AccountResType>('/account/me', body, { service: 'identity' }),
 
     changePassword: (body: ChangePasswordBodyType) =>
-        http.put<{ message: string }>('/auth/accounts/change-password', body, {
+        http.put<{ message: string }>('/account/change-password', body, {
             service: 'identity'
         }),
+
+
 
     // ─── Staff CRUD (Admin manages Staff) ────────────
     createStaff: (body: CreateStaffBodyType) =>
