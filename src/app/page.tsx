@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useGetDishes } from "../queries/useDish"
 
 // Sample dish data (filtered to available status)
 const dishesData = [
@@ -31,15 +32,18 @@ const dishesData = [
   },
 ]
 
-const featuredDishes = dishesData.filter(d => d.status === 'Available').slice(0, 3)
 
 export default function HomePage() {
   const router = useRouter()
+  const { data, isLoading } = useGetDishes()
+  const featuredDishes = (data?.payload.data ?? [])
+    .filter((d) => d.status === "Available")
+    .slice(0, 3)
 
   return (
     <div style={{ backgroundColor: "#0D0B08", color: "#F5F0E8" }}>
       {/* Header */}
-      <header 
+      <header
         style={{
           position: "sticky",
           top: 0,
@@ -346,7 +350,7 @@ export default function HomePage() {
               }}
             >
               {/* Image */}
-              <div 
+              <div
                 style={{
                   height: "150px",
                   backgroundImage: `url(${dish.image})`,
