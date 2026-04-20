@@ -40,7 +40,6 @@ const TableDish = (props: {
     }[]
 }) => {
     const { filteredDishes } = props
-    console.log(filteredDishes);
 
     return (
         <Table>
