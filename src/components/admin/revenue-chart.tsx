@@ -15,6 +15,8 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "../ui/chart"
+import { useGetOrders } from "@/src/queries/useOrder"
+import { useMemo } from "react"
 
 const chartData = [
   { month: "Jan", revenue: 18500 },
@@ -33,7 +35,34 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
+const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+
 export function RevenueChart() {
+  const { data: ordersData } = useGetOrders();
+
+  // const chartData = useMemo(() => {
+  //   const orders = ordersData?.payload.data ?? []
+
+  //   // Aggregate revenue by month for the current year
+  //   const currentYear = new Date().getFullYear()
+  //   const monthlyRevenue: Record<number, number> = {}
+
+  //   for (const order of orders) {
+  //     if (order.status !== "Served") continue
+  //     const date = new Date(order.createdAt)
+  //     if (date.getFullYear() !== currentYear) continue
+  //     const month = date.getMonth() // 0-indexed
+  //     monthlyRevenue[month] = (monthlyRevenue[month] ?? 0) + (order.dishPrice ?? 0) * order.quantity
+  //   }
+
+  //   // Build array for all 12 months (only up to current month)
+  //   const currentMonth = new Date().getMonth()
+  //   return Array.from({ length: currentMonth + 1 }, (_, i) => ({
+  //     month: MONTH_LABELS[i],
+  //     revenue: monthlyRevenue[i] ?? 0,
+  //   }))
+  // }, [ordersData])
+
   return (
     <div className="border border-border bg-card p-6">
       <div className="mb-6">
@@ -55,13 +84,19 @@ export function RevenueChart() {
             dataKey="month"
             tickLine={false}
             axisLine={false}
-            tick={{ fill: "#7D7D7D", fontSize: 12 }}
+            tick={{ fill: "#ccc", fontSize: 12 }}
           />
           <YAxis
             tickLine={false}
             axisLine={false}
-            tick={{ fill: "#7D7D7D", fontSize: 12 }}
-            tickFormatter={(value) => `$${value / 1000}k`}
+            tick={{ fill: "#ccc", fontSize: 12 }}
+            tickFormatter={(value) =>
+              value >= 1_000_000
+                ? `${(value / 1_000_000).toFixed(1)}M`
+                : value >= 1_000
+                  ? `${(value / 1_000).toFixed(0)}k`
+                  : String(value)
+            }
           />
           <ChartTooltip
             content={
