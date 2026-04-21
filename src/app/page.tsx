@@ -36,7 +36,7 @@ const dishesData = [
 export default function HomePage() {
   const router = useRouter()
   const { data, isLoading } = useGetDishes()
-  const featuredDishes = (data?.payload.data ?? [])
+  const featuredDishes = (data?.payload.data.data ?? [])
     .filter((d) => d.status === "Available")
     .slice(0, 3)
 

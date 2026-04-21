@@ -10,7 +10,7 @@ import { DishStatus } from '../constants/dish-status'
 const dishApiRequest = {
     // ─── GET all dishes ───────────────────────────────────────────────────────
     list: () =>
-        http.get<DishListResType>('/menu/dishes', {
+        http.get<{ data: DishListResType }>('/menu/dishes', {
             next: { tags: ['dishes'] },
             service: 'menu',
         }),

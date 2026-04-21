@@ -55,7 +55,7 @@ export default function GuestOrdersPage() {
     }
   }, [error, tableId, router])
 
-  const orders = data?.payload ?? []
+  const orders = data?.payload.data ?? []
   const activeOrders = orders.filter(o => o.status !== 'Cancelled' && o.status !== 'Served')
   const total = orders.reduce((sum, o) =>
     o.status !== 'Cancelled' ? sum + o.dishPrice * o.quantity : sum, 0

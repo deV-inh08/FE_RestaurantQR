@@ -8,11 +8,11 @@ export default function TableStatusGrid({
 }: {
     onSelectTable?: (tableId: number) => void
 }) {
-    const { data: tablesData } = useGetTables()
-    const { data: ordersData } = useGetOrders()
+    const { data: tablesData } = useGetTables({ page: 1, pageSize: 50 })
+    const { data: ordersData } = useGetOrders({ page: 1, pageSize: 50 })
 
-    const tables = tablesData?.payload.data ?? []
-    const orders = ordersData?.payload.data ?? []
+    const tables = tablesData?.payload.data.data ?? []
+    const orders = ordersData?.payload.data.data ?? []
 
     // Count active (non-cancelled, non-served) orders per table
     const activeCountByTable = useMemo(() => {

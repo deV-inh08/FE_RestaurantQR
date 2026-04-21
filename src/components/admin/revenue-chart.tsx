@@ -38,7 +38,10 @@ const chartConfig = {
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 export function RevenueChart() {
-  const { data: ordersData } = useGetOrders();
+  const { data: ordersData } = useGetOrders({
+    page: 1,
+    pageSize: 10
+  });
 
   // const chartData = useMemo(() => {
   //   const orders = ordersData?.payload.data ?? []

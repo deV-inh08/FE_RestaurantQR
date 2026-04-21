@@ -51,8 +51,12 @@ export const DishSchema = z.object({
 export type DishDto = z.TypeOf<typeof DishSchema>
 
 export const DishRes = z.object({
-    data: DishSchema,
+    data: z.array(DishSchema),
     message: z.string(),
+    total: z.number(),
+    page: z.number(),
+    pageSize: z.number(),
+    totalPages: z.number(),
 })
 
 export type DishResType = z.TypeOf<typeof DishRes>

@@ -125,7 +125,7 @@ export default function AccountsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   // Get all accounts
   const { data, isLoading } = useGetAccounts();
-  const accountsData = data?.payload.data
+  const accountsData = data?.payload.data.data
 
   let filteredAccounts = accountsData?.filter(
     (a) =>
@@ -133,7 +133,10 @@ export default function AccountsPage() {
       a.email.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
-
+  const pagination = {
+    page: data?.payload.data.page,
+    totalPages: data?.payload.data.totalPages,
+  }
 
 
   return (
@@ -172,7 +175,7 @@ export default function AccountsPage() {
           ) : (
             <TableAccount accounts={filteredAccounts as AccountItem[]} />
           )}
-          <PaginationV1 />
+          <PaginationV1 page={pagination.page || 1} totalPages={pagination.totalPages || 20} onPageChange={() => { }} />
         </div>
       </div>
 

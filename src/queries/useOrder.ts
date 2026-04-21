@@ -3,13 +3,14 @@ import orderApiRequest from '@/src/apiRequests/order.request'
 import { CreateOrderBodyType, UpdateOrderStatusBodyType } from '@/src/schema/order.schema'
 // ─── Order keys ────────────────────────────────────
 export const orderKeys = {
-    all: ['orders'] as const
+    all: (page: number, pageSize: number) => ['orders', page, pageSize] as const,
+    allOrders: ['orders'] as const,
 }
 
-export const useGetOrders = () =>
+export const useGetOrders = ({ page, pageSize }: { page: number, pageSize: number }) =>
     useQuery({
-        queryKey: orderKeys.all,
-        queryFn: orderApiRequest.getAll,
+        queryKey: orderKeys.all(page, pageSize),
+        queryFn: () => orderApiRequest.getAll(page, pageSize),
         // Poll every 15s so the order list stays fresh without WebSocket
         refetchInterval: 15_000
     })
@@ -19,7 +20,7 @@ export const useUpdateOrderStatusMutation = () => {
     return useMutation({
         mutationFn: ({ id, ...body }: UpdateOrderStatusBodyType & { id: number }) =>
             orderApiRequest.updateStatus(id, body),
-        onSuccess: () => qc.invalidateQueries({ queryKey: orderKeys.all })
+        onSuccess: () => qc.invalidateQueries({ queryKey: orderKeys.allOrders })
     })
 }
 
@@ -27,6 +28,6 @@ export const useCreateOrderMutation = () => {
     const qc = useQueryClient()
     return useMutation({
         mutationFn: (body: CreateOrderBodyType) => orderApiRequest.create(body),
-        onSuccess: () => qc.invalidateQueries({ queryKey: orderKeys.all })
+        onSuccess: () => qc.invalidateQueries({ queryKey: orderKeys.allOrders })
     })
 }

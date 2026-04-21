@@ -33,12 +33,12 @@ export default function CreateOrderModal({
     const [dishId, setDishId] = useState<string>('')
     const [qty, setQty] = useState<string>('1')
 
-    const { data: tablesData } = useGetTables()
+    const { data: tablesData } = useGetTables({ page: 1, pageSize: 50 })
     const { data: dishesData } = useGetDishes()
     const createMutation = useCreateOrderMutation()
 
-    const tables = tablesData?.payload.data ?? []
-    const dishes = (dishesData?.payload.data ?? []).filter(d => d.status === 'Available')
+    const tables = tablesData?.payload.data.data ?? []
+    const dishes = (dishesData?.payload.data.data ?? []).filter(d => d.status === 'Available')
 
     const handleSave = async () => {
         if (!tableId || !dishId) {

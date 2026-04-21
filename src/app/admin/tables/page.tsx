@@ -49,10 +49,26 @@ export default function TablesPage() {
   const [tableToDelete, setTableToDelete] = useState<TableDto | null>(null)
   const [search, setSearch] = useState('')
 
-  const { data, isLoading } = useGetTables()
-  const tables = (data?.payload.data ?? []).filter(t =>
+  const { data, isLoading } = useGetTables({ page: 1, pageSize: 5 })
+  const tables = (data?.payload.data.data ?? []).filter(t =>
     String(t.number).includes(search)
   )
+
+  const pagination = {
+    page: data?.payload.data.page,
+    pageSize: data?.payload.data.pageSize,
+    totalPages: data?.payload.data.totalPages,
+  };
+
+
+  console.log(`pagination___________________________________, ${JSON.stringify(pagination)}`);
+
+  const handlePageChange = (newPage: number) => {
+    // Update URL params if needed
+    // router.push(`?page=${newPage}&pageSize=${pagination.pageSize}`)
+    // Or update state if you manage pagination via state
+    // setPage(newPage);
+  }
 
   return (
     <div className="min-h-screen">
@@ -110,7 +126,7 @@ export default function TablesPage() {
               </TableBody>
             </Table>
           )}
-          <PaginationV1 />
+          <PaginationV1 totalPages={pagination.totalPages || 10} page={pagination.page || 1} onPageChange={handlePageChange} />
         </div>
       </div>
 

@@ -36,7 +36,11 @@ const orderSchema = z.object({
 
 export const OrderListRes = z.object({
     data: z.array(orderSchema),
-    message: z.string()
+    message: z.string(),
+    total: z.number(),
+    page: z.number(),
+    pageSize: z.number(),
+    totalPages: z.number(),
 })
 export type OrderListResType = z.TypeOf<typeof OrderListRes>
 

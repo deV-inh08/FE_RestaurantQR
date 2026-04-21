@@ -32,7 +32,10 @@ const chartConfig = {
 } satisfies ChartConfig
 
 export function TopDishesChart() {
-  const { data: ordersData, isLoading } = useGetOrders();
+  const { data: ordersData, isLoading } = useGetOrders({
+    page: 1,
+    pageSize: 10
+  });
 
   // const chartData = useMemo(() => {
   //   const orders = ordersData?.payload.data ?? []

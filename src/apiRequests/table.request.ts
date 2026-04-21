@@ -3,8 +3,8 @@ import http from '../lib/http'
 import { TableListResType, TableResType, CreateTableBodyType, UpdateTableStatusBodyType } from '../schema/table.schema';
 
 const tableApiRequest = {
-    getAll: () =>
-        http.get<TableListResType>('/table', { service: 'order' }),
+    getAll: (page = 1, pageSize = 50) =>
+        http.get<{ data: TableListResType }>(`/table?page=${page}&pageSize=${pageSize}`, { service: 'order' }),
 
     getById: (id: number) =>
         http.get<TableResType>(`/table/${id}`, { service: 'order' }),

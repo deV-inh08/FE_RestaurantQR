@@ -16,7 +16,11 @@ export type AccountType = z.TypeOf<typeof AccountSchema>
 
 export const AccountListRes = z.object({
     data: z.array(AccountSchema),
-    message: z.string()
+    message: z.string(),
+    total: z.number(),
+    page: z.number(),
+    pageSize: z.number(),
+    totalPages: z.number(),
 })
 export type AccountListResType = z.TypeOf<typeof AccountListRes>
 

@@ -21,7 +21,11 @@ export const tableSchema = z.object({
 })
 export const tableListSchema = z.object({
     data: z.array(tableSchema),
-    message: z.string()
+    message: z.string(),
+    total: z.number(),
+    page: z.number(),
+    pageSize: z.number(),
+    totalPages: z.number(),
 })
 export const tableResSchema = z.object({
     data: tableSchema,

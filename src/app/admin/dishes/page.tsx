@@ -34,7 +34,7 @@ export default function DishesPage() {
 
 
   const { data, isLoading } = useGetDishes()
-  const dishes = data?.payload.data ?? []
+  const dishes = data?.payload.data.data ?? []
 
   const updateMutation = useUpdateDishMutation()
   const deleteMutation = useDeleteDishMutation()
@@ -83,8 +83,7 @@ export default function DishesPage() {
         <div className="rounded-md border border-border-subtle bg-card shadow-card">
           <TableDish filteredDishes={filteredDishes}></TableDish>
 
-          {/* Pagination */}
-          <PaginationV1></PaginationV1>
+
         </div>
       </div>
 

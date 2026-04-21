@@ -68,6 +68,7 @@ function TableStatusPill({ status }: { status: TableStatus }) {
 
 // ─── Main page ──────────────────────────────────────
 export default function OrdersPage() {
+  const [page, setPage] = useState(1)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -77,7 +78,7 @@ export default function OrdersPage() {
   const [orderToView, setOrderToView] = useState<OrderDto | null>(null)
   const [orderToEdit, setOrderToEdit] = useState<OrderDto | null>(null)
 
-  const { data, isLoading } = useGetOrders()
+  const { data, isLoading } = useGetOrders({ page: 1, pageSize: 5 })
 
   const handleTableClick = (tableId: number) => {
     setCreatePreselectedTable(tableId)
@@ -86,7 +87,7 @@ export default function OrdersPage() {
 
   const guestItemCount = useMemo(() => {
     const map: Record<string, number> = {}
-    for (const o of data?.payload.data ?? []) {
+    for (const o of data?.payload.data.data ?? []) {
       const key = `${o.tableId}-${o.guestId}`
       map[key] = (map[key] ?? 0) + 1
     }
@@ -96,24 +97,35 @@ export default function OrdersPage() {
   const getTotal = (o: OrderDto) =>
     o.dishPrice ? formatCurrency(o.dishPrice * o.quantity) : '—'
 
+  // Reset page when filter changes
+  const handleStatusChange = (v: string) => { setStatusFilter(v); setPage(1) }
+  const handleDateFromChange = (v: string) => { setDateFrom(v); setPage(1) }
+  const handleDateToChange = (v: string) => { setDateTo(v); setPage(1) }
+
   const orders = useMemo(() => {
-    return (data?.payload.data ?? []).filter(o => {
+    return (data?.payload.data.data ?? []).filter(o => {
       const matchStatus = statusFilter === 'all' || o.status === statusFilter
       const matchFrom = !dateFrom || new Date(o.createdAt) >= new Date(dateFrom)
       const matchTo = !dateTo || new Date(o.createdAt) <= new Date(dateTo + 'T23:59:59')
       return matchStatus && matchFrom && matchTo
     })
   }, [data, statusFilter, dateFrom, dateTo])
+
+  const total = data?.payload.data.total;
+  const pagination = {
+    page: data?.payload.data.page,
+    pageSize: data?.payload.data.pageSize,
+    totalPages: data?.payload.data.totalPages,
+  };
+
   return (
     <div className="min-h-screen">
       <AdminHeader title="Orders" subtitle="Quản lý đơn hàng theo thời gian thực" />
 
 
       <div className="p-6">
-        {/* Table Status Grid — clicking a table pre-fills the create modal */}
         <TableStatusGrid onSelectTable={handleTableClick} />
 
-        {/* ── Orders section ── */}
         <div>
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-3">
@@ -122,7 +134,7 @@ export default function OrdersPage() {
                 <svg className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)}
+                <input type="date" value={dateFrom} onChange={e => handleDateFromChange(e.target.value)}
                   className="h-10 w-44 rounded-md border border-input-border bg-input pl-10 pr-3 text-sm text-foreground focus:border-primary focus:outline-none [color-scheme:dark]" />
               </div>
               <span className="text-sm text-muted-foreground">to</span>
@@ -130,12 +142,10 @@ export default function OrdersPage() {
                 <svg className="absolute left-3 h-4 w-4 text-muted-foreground pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                 </svg>
-                <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)}
+                <input type="date" value={dateTo} onChange={e => handleDateToChange(e.target.value)}
                   className="h-10 w-44 rounded-md border border-input-border bg-input pl-10 pr-3 text-sm text-foreground focus:border-primary focus:outline-none [color-scheme:dark]" />
               </div>
-
-              {/* Status filter */}
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusChange}>
                 <SelectTrigger className="h-10 w-36 rounded-md border-input-border bg-input text-sm text-foreground focus:ring-0">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
@@ -148,9 +158,12 @@ export default function OrdersPage() {
                   ))}
                 </SelectContent>
               </Select>
+              {/* Total count indicator */}
+              <span className="text-xs text-muted-foreground">
+                {total} đơn tổng
+              </span>
             </div>
 
-            {/* Create button */}
             <Button
               onClick={() => { setCreatePreselectedTable(undefined); setIsCreateOpen(true) }}
               className="h-10 gap-2 rounded-md bg-primary px-5 font-bold uppercase tracking-wide text-black shadow-md hover:shadow-gold"
@@ -160,7 +173,6 @@ export default function OrdersPage() {
             </Button>
           </div>
 
-          {/* Table */}
           <div className="rounded-md border border-border-subtle bg-card shadow-card">
             {isLoading ? (
               <div className="flex items-center justify-center py-16 text-muted-foreground">Đang tải...</div>
@@ -169,9 +181,7 @@ export default function OrdersPage() {
                 <TableHeader>
                   <TableRow className="border-border-subtle hover:bg-transparent">
                     {['ORDER ID', 'TABLE', 'GUEST', 'ITEMS', 'TOTAL', 'STATUS', 'TIME', 'ACTIONS'].map(h => (
-                      <TableHead key={h} className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                        {h}
-                      </TableHead>
+                      <TableHead key={h} className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{h}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
@@ -187,47 +197,22 @@ export default function OrdersPage() {
                     const guestKey = `${order.tableId}-${order.guestId}`
                     return (
                       <TableRow key={order.id} className="border-border-subtle transition-colors hover:bg-gold-subtle/20">
-                        {/* Order ID */}
                         <TableCell className="font-mono font-bold text-foreground">
                           ORD-{String(order.id).padStart(3, '0')}
                         </TableCell>
-                        {/* Table */}
+                        <TableCell className="text-foreground">Table {order.tableNumber}</TableCell>
+                        <TableCell className="text-muted-foreground">{order.guestName}</TableCell>
                         <TableCell className="text-foreground">
-                          Table {order.tableNumber}
-                        </TableCell>
-                        {/* Guest */}
-                        <TableCell className="text-muted-foreground">
-                          {order.guestName}
-                        </TableCell>
-                        {/* Items */}
-                        <TableCell className="text-foreground">
-                          <button
-                            onClick={() => setOrderToView(order)}
-                            className="text-primary underline-offset-2 hover:underline"
-                          >
+                          <button onClick={() => setOrderToView(order)} className="text-primary underline-offset-2 hover:underline">
                             {guestItemCount[guestKey] ?? 1} item{(guestItemCount[guestKey] ?? 1) > 1 ? 's' : ''}
                           </button>
                         </TableCell>
-                        {/* Total */}
-                        <TableCell className="font-bold text-primary">
-                          {getTotal(order)}
-                        </TableCell>
-                        {/* Status */}
-                        <TableCell>
-                          <StatusBadge status={order.status} />
-                        </TableCell>
-                        {/* Time */}
-                        <TableCell className="text-muted-foreground text-sm tabular-nums">
-                          {formatTime(order.createdAt)}
-                        </TableCell>
-                        {/* Actions */}
+                        <TableCell className="font-bold text-primary">{getTotal(order)}</TableCell>
+                        <TableCell><StatusBadge status={order.status} /></TableCell>
+                        <TableCell className="text-muted-foreground text-sm tabular-nums">{formatTime(order.createdAt)}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => setOrderToView(order)}
-                              className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-gold-subtle hover:text-foreground"
-                              title="Xem chi tiết"
-                            >
+                            <button onClick={() => setOrderToView(order)} className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-gold-subtle hover:text-foreground" title="Xem chi tiết">
                               <Eye className="h-4 w-4" />
                             </button>
                             <button
@@ -246,9 +231,13 @@ export default function OrdersPage() {
                 </TableBody>
               </Table>
             )}
+
+            {/* Real pagination */}
+            <PaginationV1 page={pagination.page || 1} totalPages={pagination.totalPages || 20} onPageChange={setPage} />
           </div>
         </div>
       </div>
+
       {/* Modals */}
       <CreateOrderModal
         open={isCreateOpen}
@@ -256,6 +245,7 @@ export default function OrdersPage() {
         onClose={() => { setIsCreateOpen(false); setCreatePreselectedTable(undefined) }}
       />
       <ViewOrderModal order={orderToView} onClose={() => setOrderToView(null)} />
+
       <EditOrderModal order={orderToEdit} onClose={() => setOrderToEdit(null)} />
     </div>
   )
