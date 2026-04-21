@@ -11,7 +11,7 @@ const guestApiRequest = {
      * localStorage sẽ trống → không có header thừa.
      */
     login: (body: GuestLoginBodyType) =>
-        http.post<GuestLoginResponseType['data']>(
+        http.post<GuestLoginResponseType>(
             '/guest/login',
             body,
             { service: 'order' }
@@ -33,7 +33,7 @@ const guestApiRequest = {
      * Guest token lưu trong sessionStorage riêng.
      */
     getMyOrders: (guestAccessToken: string) =>
-        http.get<GuestOrderListResponseType['data']>(
+        http.get<GuestOrderListResponseType>(
             '/order/my-orders',
             {
                 service: 'order',

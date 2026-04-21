@@ -46,8 +46,8 @@ export default function GuestLoginPage() {
         tableNumber: table.number,
         name: name.trim()
       })
-      const { guest, accessToken, refreshToken } = result.payload
-
+      console.log("Guest result", result.payload)
+      const { guest, accessToken, refreshToken } = result.payload.data
       // Lưu Guest JWT vào sessionStorage (tách biệt với admin localStorage)
       setGuestTokens(accessToken, refreshToken)
       setGuestInfo(guest.name, guest.tableNumber)

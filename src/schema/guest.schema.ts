@@ -63,3 +63,14 @@ export const GuestOrderListResponseSchema = z.object({
 export type GuestOrderListResponseType = z.TypeOf<typeof GuestOrderListResponseSchema>
 
 
+
+export const GuestRefreshTokenResponseSchema = z.object({
+    message: z.string(),
+    data: z.object({
+        guest: GuestDtoSchema,
+        accessToken: z.string(),
+        refreshToken: z.string()
+    })
+})
+
+export type GuestRefreshTokenResponseType = z.TypeOf<typeof GuestRefreshTokenResponseSchema>

@@ -1,5 +1,4 @@
 import { NextResponse, type NextRequest } from "next/server";
-import jwt from 'jsonwebtoken'
 import { RoleType } from "@/src/constants/role";
 import { Roles } from "@/src/constants/role";
 import { decodeToken } from "./lib/utils";
@@ -15,8 +14,6 @@ export async function middleware(request: NextRequest) {
     // Đọc token từ cookie (được set bởi Next.js route handler khi login)
     const accessToken = request.cookies.get('accessToken')?.value
     const refreshToken = request.cookies.get('refreshToken')?.value
-    console.log(`accessToken____________________________: ${accessToken}`)
-    console.log(`refreshToken____________________________: ${refreshToken}`)
     /**
      * 1. Chưa đăng nhập mà vào private route → redirect về /login
      */

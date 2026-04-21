@@ -124,11 +124,7 @@ const request = async <TResponse>(
 
         // if error is UnAuthorized
         if (res.status === HTTP_STATUS.UNAUTHORIZED) {
-            const tokenFromHeader = (rawHeaders as Record<string, string>)
-                ?.['Authorization']
-                ?.split('Bearer ')[1] ?? null
-            await handleUnauthorized?.(tokenFromHeader)
-
+            await handleUnauthorized()
         }
 
         throw new HttpError(res.status, payload as any)

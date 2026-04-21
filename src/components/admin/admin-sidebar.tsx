@@ -34,7 +34,8 @@ export function AdminSidebar() {
     await authApiRequest.logout()
     removeTokensFromLS()
     localStorage.removeItem('user')
-    route.push('/login')
+    localStorage.removeItem('vietgold_reservations')
+    route.push('/')
   }
 
   return (

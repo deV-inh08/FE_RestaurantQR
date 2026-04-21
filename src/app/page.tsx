@@ -353,7 +353,7 @@ export default function HomePage() {
               <div
                 style={{
                   height: "150px",
-                  backgroundImage: `url(${dish.image})`,
+                  backgroundImage: `url(${dish.imagePath})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                 }}
