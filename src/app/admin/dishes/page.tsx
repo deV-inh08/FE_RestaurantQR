@@ -26,23 +26,19 @@ import TableDish from "./components/table_dish"
 import { useAddDishMutation, useDeleteDishMutation, useGetDishes, useUpdateDishMutation } from "@/src/queries/useDish"
 import { CreateDishBodyType } from "@/src/schema/dish.schema"
 import AddDish from "./components/add_dish"
+import UpdateDish from "./components/update_dish"
+import { DishDto } from "@/src/schema/dish.schema"
 
 
 export default function DishesPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
 
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false)
+  const [selectedDish, setSelectedDish] = useState<DishDto | null>(null)
 
   const { data, isLoading } = useGetDishes()
   const dishes = data?.payload.data.data ?? []
-
-  const updateMutation = useUpdateDishMutation()
-  const deleteMutation = useDeleteDishMutation()
-
-
-  const handleDeleteDish = (id: number) => {
-    deleteMutation.mutate(id)
-  }
 
 
   const filteredDishes = dishes.filter((dish) =>
@@ -81,7 +77,7 @@ export default function DishesPage() {
 
         {/* Data Table */}
         <div className="rounded-md border border-border-subtle bg-card shadow-card">
-          <TableDish filteredDishes={filteredDishes}></TableDish>
+          <TableDish filteredDishes={filteredDishes} setSelectedDish={setSelectedDish} setIsUpdateModalOpen={setIsUpdateModalOpen}></TableDish>
 
 
         </div>
@@ -91,6 +87,12 @@ export default function DishesPage() {
         isAddModalOpen={isAddModalOpen}
         setIsAddModalOpen={setIsAddModalOpen}
       ></AddDish>
+
+      <UpdateDish
+        isUpdateModalOpen={isUpdateModalOpen}
+        setIsUpdateModalOpen={setIsUpdateModalOpen}
+        dish={selectedDish}
+      ></UpdateDish>
     </div>
   )
 }

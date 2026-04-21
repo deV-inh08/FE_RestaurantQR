@@ -14,7 +14,7 @@ const isClient = typeof window !== 'undefined'
 
 let clientLogoutRequest: null | Promise<void> = null
 
-export async function handleUnauthorized(): Promise<void> {
+export async function handleUnauthorized(tokenFromHeader: string | null): Promise<void> {
     if (!isClient) return
 
     const isGuestRoute = window.location.pathname.startsWith('/table/')

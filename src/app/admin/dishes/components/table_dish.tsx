@@ -10,7 +10,9 @@ import {
 import { cn, formatCurrency } from "@/src/lib/utils";
 import { Pencil, Trash2 } from "lucide-react"
 import Image from "next/image";
-import { DishDto } from "@/src/schema/dish.schema";
+import { DishDto, UpdateDishBodyType } from "@/src/schema/dish.schema";
+import { useDeleteDishMutation, useUpdateDishMutation } from "@/src/queries/useDish";
+
 
 function StatusPill({ status }: { status: string }) {
     const styles = {
@@ -32,8 +34,15 @@ function StatusPill({ status }: { status: string }) {
 }
 const TableDish = (props: {
     filteredDishes: DishDto[]
+    setSelectedDish: (dish: DishDto) => void
+    setIsUpdateModalOpen: (open: boolean) => void
 }) => {
-    const { filteredDishes } = props
+    const { filteredDishes, setSelectedDish, setIsUpdateModalOpen } = props
+    const deleteMutation = useDeleteDishMutation()
+    const handleDeleteDish = (id: number) => {
+        deleteMutation.mutate(id)
+    }
+
 
     return (
         <Table>
@@ -90,6 +99,10 @@ const TableDish = (props: {
                         <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
                                 <Button
+                                    onClick={() => {
+                                        setSelectedDish(dish)
+                                        setIsUpdateModalOpen(true)
+                                    }}
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8 rounded-md text-foreground hover:bg-gold-subtle hover:text-foreground"
@@ -98,6 +111,7 @@ const TableDish = (props: {
                                     <span className="sr-only">Edit</span>
                                 </Button>
                                 <Button
+                                    onClick={() => handleDeleteDish(dish.id)}
                                     variant="ghost"
                                     size="icon"
                                     className="h-8 w-8 rounded-md text-foreground hover:bg-destructive/20 hover:text-destructive"

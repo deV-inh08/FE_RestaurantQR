@@ -39,7 +39,7 @@ export default function GuestMenuPage() {
 
   // Fetch menu từ Menu.API — dùng hook đã có, không viết lại
   const { data, isLoading } = useGetDishes()
-  const allDishes = data?.payload.data ?? []
+  const allDishes = data?.payload.data.data ?? []
   const availableDishes = allDishes.filter(d => d.status === 'Available')
   const categories = ['all', ...Array.from(new Set(availableDishes.map(d => d.category as string)))]
   const filteredDishes = activeCategory === 'all'
