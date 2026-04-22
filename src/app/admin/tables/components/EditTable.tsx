@@ -1,6 +1,6 @@
 import envConfig from "@/src/config";
 import { handleErrorApi } from "@/src/lib/utils";
-import { useResetTableMutation, useUpdateTableStatusMutation } from "@/src/queries/useTable";
+import { useResetTableMutation, useUpdateTableStatusMutation, useUpdateTableVisibilityMutation } from "@/src/queries/useTable";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -33,6 +33,7 @@ export const EditTableModal = ({ table, onClose }: { table: TableDto | null; onC
     const [isVisible, setIsVisible] = useState(table?.isVisibleOnReservation ?? true)
     const updateStatusMutation = useUpdateTableStatusMutation()
     const resetMutation = useResetTableMutation()
+    const updateVisibilityMutation = useUpdateTableVisibilityMutation()
 
     useEffect(() => {
         if (table) {
@@ -46,7 +47,13 @@ export const EditTableModal = ({ table, onClose }: { table: TableDto | null; onC
     const handleSave = async () => {
         if (!table) return
         try {
-            await updateStatusMutation.mutateAsync({ id: table.id, status: status as any })
+            await Promise.all([
+                updateStatusMutation.mutateAsync({ id: table.id, status: status as any }),
+                // Chỉ gọi visibility nếu đã thay đổi so với giá trị hiện tại
+                isVisible !== table.isVisibleOnReservation
+                    ? updateVisibilityMutation.mutateAsync({ id: table.id, isVisibleOnReservation: isVisible })
+                    : Promise.resolve()
+            ])
             toast.success('Cập nhật trạng thái thành công')
             onClose()
         } catch (error) { handleErrorApi({ error }) }

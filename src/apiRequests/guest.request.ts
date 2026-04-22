@@ -1,5 +1,5 @@
 import http from '../lib/http'
-import { GuestLoginBodyType, GuestLoginResponseType, GuestOrderListResponseType } from '@/src/schema/guest.schema'
+import { GuestDtoType, GuestLoginBodyType, GuestLoginResponseType, GuestOrderListResponseType, GuestRefreshTokenResponseType } from '@/src/schema/guest.schema'
 
 
 // ─── API requests ──────────────────────────────────────────────────────────────
@@ -20,8 +20,11 @@ const guestApiRequest = {
     /**
      * POST /order/api/v1/guest/refresh-token — AllowAnonymous
      */
+
+
+
     refreshToken: (refreshToken: string) =>
-        http.post<{ accessToken: string; refreshToken: string }>(
+        http.post<GuestRefreshTokenResponseType>(
             '/guest/refresh-token',
             { refreshToken },
             { service: 'order' }

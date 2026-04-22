@@ -27,8 +27,9 @@ export async function handleUnauthorized(tokenFromHeader: string | null): Promis
         if (refreshToken) {
             try {
                 const res = await guestApiRequest.refreshToken(refreshToken)
+                const { accessToken: newAccessToken, refreshToken: newRefreshToken } = res.payload.data
                 // Refresh thành công → lưu token mới, reload lại trang
-                setGuestTokens(res.payload.accessToken, res.payload.refreshToken)
+                setGuestTokens(newAccessToken, newRefreshToken)
                 window.location.reload()
                 return
             } catch {
