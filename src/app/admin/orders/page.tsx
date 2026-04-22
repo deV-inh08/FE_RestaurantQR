@@ -64,7 +64,7 @@ function TableStatusPill({ status }: { status: TableStatus }) {
   )
 }
 
-
+const PAGE_SIZE = 20
 
 // ─── Main page ──────────────────────────────────────
 export default function OrdersPage() {
@@ -78,7 +78,7 @@ export default function OrdersPage() {
   const [orderToView, setOrderToView] = useState<OrderDto | null>(null)
   const [orderToEdit, setOrderToEdit] = useState<OrderDto | null>(null)
 
-  const { data, isLoading } = useGetOrders({ page: 1, pageSize: 5 })
+  const { data, isLoading } = useGetOrders({ page, pageSize: PAGE_SIZE })
 
   const handleTableClick = (tableId: number) => {
     setCreatePreselectedTable(tableId)
@@ -113,9 +113,9 @@ export default function OrdersPage() {
 
   const total = data?.payload.data.total;
   const pagination = {
-    page: data?.payload.data.page,
-    pageSize: data?.payload.data.pageSize,
-    totalPages: data?.payload.data.totalPages,
+    page: data?.payload.data.page ?? 1,
+    totalPages: data?.payload.data.totalPages ?? 1,
+    total: data?.payload.data.total ?? 0,
   };
 
   return (

@@ -113,6 +113,7 @@ function getInitials(name: string) {
     .toUpperCase()
     .slice(0, 2)
 }
+const PAGE_SIZE = 20
 
 export default function AccountsPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -123,8 +124,9 @@ export default function AccountsPage() {
 
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [page, setPage] = useState(1)
   // Get all accounts
-  const { data, isLoading } = useGetAccounts();
+  const { data, isLoading } = useGetAccounts({ page, pageSize: PAGE_SIZE });
   const accountsData = data?.payload.data.data
 
   let filteredAccounts = accountsData?.filter(
@@ -134,8 +136,8 @@ export default function AccountsPage() {
   )
 
   const pagination = {
-    page: data?.payload.data.page,
-    totalPages: data?.payload.data.totalPages,
+    page: data?.payload.data.page ?? 1,
+    totalPages: data?.payload.data.totalPages ?? 1,
   }
 
 
@@ -175,7 +177,7 @@ export default function AccountsPage() {
           ) : (
             <TableAccount accounts={filteredAccounts as AccountItem[]} />
           )}
-          <PaginationV1 page={pagination.page || 1} totalPages={pagination.totalPages || 20} onPageChange={() => { }} />
+          <PaginationV1 page={pagination.page} totalPages={pagination.totalPages} onPageChange={setPage} />
         </div>
       </div>
 

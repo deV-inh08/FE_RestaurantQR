@@ -160,7 +160,7 @@ export default function GuestOrdersPage() {
                   {/* Image */}
                   <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md bg-surface">
                     {imgSrc ? (
-                      <Image src={imgSrc} alt={order.dishName} fill className="object-cover" />
+                      <Image src={`http://localhost:3002/${order.dishImage}`} alt={order.dishName} fill className="object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center text-2xl">🍽️</div>
                     )}

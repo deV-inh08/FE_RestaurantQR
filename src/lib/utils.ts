@@ -4,6 +4,7 @@ import { UseFormSetError } from 'react-hook-form'
 import { EntityError } from "../lib/http"
 import { toast } from "sonner"
 import jwt, { JwtPayload } from "jsonwebtoken"
+import envConfig from "../config"
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -82,4 +83,14 @@ export const handleErrorApi = ({
       duration: duration ?? 5000
     })
   }
+}
+
+export const handleImageURL = (path: string) => {
+  // imagePath có thể là relative path hoặc full URL
+  const imgSrc = path
+    ? path.startsWith('http')
+      ? path
+      : `${envConfig.NEXT_PUBLIC_API_MENU}${path}`
+    : null
+  return imgSrc
 }

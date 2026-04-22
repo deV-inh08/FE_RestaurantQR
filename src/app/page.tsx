@@ -3,34 +3,9 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useGetDishes } from "../queries/useDish"
-
-// Sample dish data (filtered to available status)
-const dishesData = [
-  {
-    id: 1,
-    name: "Phở Bò Đặc Biệt",
-    category: "Soup",
-    price: 185000,
-    status: "Available",
-    image: "https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=1200&q=80",
-  },
-  {
-    id: 2,
-    name: "Bún Chả Hà Nội",
-    category: "Noodles",
-    price: 165000,
-    status: "Available",
-    image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80",
-  },
-  {
-    id: 3,
-    name: "Cơm Tấm Sài Gòn",
-    category: "Rice",
-    price: 155000,
-    status: "Available",
-    image: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&q=80",
-  },
-]
+import Image from "next/image"
+import envConfig from "../config"
+import { handleImageURL } from "../lib/utils"
 
 
 export default function HomePage() {
@@ -40,6 +15,7 @@ export default function HomePage() {
     .filter((d) => d.status === "Available")
     .slice(0, 3)
 
+  console.log('featuredDishes_______________________________', featuredDishes)
   return (
     <div style={{ backgroundColor: "#0D0B08", color: "#F5F0E8" }}>
       {/* Header */}
@@ -350,10 +326,11 @@ export default function HomePage() {
               }}
             >
               {/* Image */}
+
               <div
                 style={{
                   height: "150px",
-                  backgroundImage: `url(${dish.imagePath})`,
+                  backgroundImage: `url(http://localhost:3002/${dish.imagePath})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                 }}

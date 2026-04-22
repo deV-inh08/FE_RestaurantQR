@@ -15,8 +15,8 @@ import {
  */
 const accountApiRequest = {
     // ─── List / Get ──────────────────────────────────
-    getAll: () =>
-        http.get<{ data: AccountListResType }>('/account', { service: 'identity' }),
+    getAll: (page = 1, pageSize = 20) =>
+        http.get<{ data: AccountListResType }>(`/account?page=${page}&pageSize=${pageSize}`, { service: 'identity' }),
 
     getById: (id: number) =>
         http.get<AccountResType>(`/account/${id}`, { service: 'identity' }),

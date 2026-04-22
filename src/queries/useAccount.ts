@@ -8,16 +8,17 @@ import {
 } from '../schema/account.schema'
 
 export const accountKeys = {
-    all: ['account'] as const,
+    all: (page: number, pageSize: number) => ['account', page, pageSize] as const,
+    allAccounts: ['account'] as const,
     detail: (id: number) => ['account', id] as const,
     me: ['account', 'me'] as const
 }
 
 // ─── Queries ───────────────────────────────────────
-export const useGetAccounts = () =>
+export const useGetAccounts = ({ page = 1, pageSize = 20 }: { page?: number; pageSize?: number }) =>
     useQuery({
-        queryKey: accountKeys.all,
-        queryFn: accountApiRequest.getAll
+        queryKey: accountKeys.all(page, pageSize),
+        queryFn: () => accountApiRequest.getAll(page, pageSize)
     })
 
 export const useGetAccount = ({
@@ -45,7 +46,7 @@ export const useCreateStaffMutation = () => {
     return useMutation({
         mutationFn: (body: CreateStaffBodyType) => accountApiRequest.createStaff(body),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: accountKeys.all })
+            queryClient.invalidateQueries({ queryKey: accountKeys.allAccounts })
         }
     })
 }
@@ -56,7 +57,7 @@ export const useUpdateEmployeeMutation = () => {
         mutationFn: ({ id, ...body }: UpdateEmployeeBodyType & { id: number }) =>
             accountApiRequest.updateEmployee(id, body),
         onSuccess: (_, variables) => {
-            queryClient.invalidateQueries({ queryKey: accountKeys.all })
+            queryClient.invalidateQueries({ queryKey: accountKeys.allAccounts })
             queryClient.invalidateQueries({ queryKey: accountKeys.detail(variables.id) })
         }
     })
@@ -67,7 +68,7 @@ export const useDeleteEmployeeMutation = () => {
     return useMutation({
         mutationFn: (id: number) => accountApiRequest.deleteEmployee(id),
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: accountKeys.all })
+            queryClient.invalidateQueries({ queryKey: accountKeys.allAccounts })
         }
     })
 }

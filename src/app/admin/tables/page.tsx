@@ -42,14 +42,16 @@ function StatusPill({ status }: { status: string }) {
   )
 }
 
+const PAGE_SIZE = 20
 // ─── Main page ──────────────────────────────────────
 export default function TablesPage() {
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [tableToEdit, setTableToEdit] = useState<TableDto | null>(null)
   const [tableToDelete, setTableToDelete] = useState<TableDto | null>(null)
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
 
-  const { data, isLoading } = useGetTables({ page: 1, pageSize: 5 })
+  const { data, isLoading } = useGetTables({ page, pageSize: PAGE_SIZE })
   const tables = (data?.payload.data.data ?? []).filter(t =>
     String(t.number).includes(search)
   )
@@ -59,16 +61,6 @@ export default function TablesPage() {
     pageSize: data?.payload.data.pageSize,
     totalPages: data?.payload.data.totalPages,
   };
-
-
-  console.log(`pagination___________________________________, ${JSON.stringify(pagination)}`);
-
-  const handlePageChange = (newPage: number) => {
-    // Update URL params if needed
-    // router.push(`?page=${newPage}&pageSize=${pagination.pageSize}`)
-    // Or update state if you manage pagination via state
-    // setPage(newPage);
-  }
 
   return (
     <div className="min-h-screen">
@@ -126,7 +118,7 @@ export default function TablesPage() {
               </TableBody>
             </Table>
           )}
-          <PaginationV1 totalPages={pagination.totalPages || 10} page={pagination.page || 1} onPageChange={handlePageChange} />
+          <PaginationV1 totalPages={pagination.totalPages || 10} page={pagination.page || 1} onPageChange={setPage} />
         </div>
       </div>
 
