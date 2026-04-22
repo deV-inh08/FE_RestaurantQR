@@ -19,6 +19,7 @@ import {
     SelectValue,
 } from "@/src/components/ui/select"
 import { Button } from "@/src/components/ui/button"
+import dishSnapshotApiRequest from "@/src/apiRequests/dish_snapshot.request"
 // ─── Create Order Modal ───────────────────────────────
 export default function CreateOrderModal({
     open,
@@ -46,12 +47,14 @@ export default function CreateOrderModal({
             return
         }
         try {
+            const snapshotRes = await dishSnapshotApiRequest.getId(Number(dishId))
+            const { id: dishSnapshotId } = snapshotRes.payload.data
             // Backend: CreateOrderAsStaffRequest { tableId, dishSnapshotId, quantity }
             // For staff-created orders we pass dishId as dishSnapshotId — the backend
             // resolves to the latest snapshot of that dish.
             await createMutation.mutateAsync({
                 tableId: Number(tableId),
-                dishSnapshotId: Number(dishId),
+                dishSnapshotId: Number(dishSnapshotId),
                 quantity: Math.max(1, Number(qty)),
             })
             toast.success('Đã tạo đơn hàng')
