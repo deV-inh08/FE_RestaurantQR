@@ -53,3 +53,10 @@ export const useDeleteTableMutation = () => {
         onSuccess: () => qc.invalidateQueries({ queryKey: tableKeys.allTables })
     })
 }
+
+export const useGetTablesForReservation = () =>
+    useQuery({
+        queryKey: ['tables-reservation'],
+        queryFn: tableApiRequest.getAvailableForReservation,
+        staleTime: 60_000,   // 1 phút — không cần refresh quá thường
+    })

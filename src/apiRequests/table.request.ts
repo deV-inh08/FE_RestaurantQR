@@ -1,4 +1,5 @@
 import http from '../lib/http'
+import { ReservationTableDto } from '../schema/reservation.schema';
 
 import { TableListResType, TableResType, CreateTableBodyType, UpdateTableStatusBodyType } from '../schema/table.schema';
 
@@ -20,7 +21,13 @@ const tableApiRequest = {
         http.patch<TableResType>(`/table/${id}/reset`, null, { service: 'order' }),
 
     delete: (id: number) =>
-        http.delete<TableResType>(`/table/${id}`, { service: 'order' })
+        http.delete<TableResType>(`/table/${id}`, { service: 'order' }),
+
+    getAvailableForReservation: () =>
+        http.get<{ message: string; data: ReservationTableDto[] }>(
+            '/table/reservation-available',
+            { service: 'order' }
+        ),
 }
 
 export default tableApiRequest

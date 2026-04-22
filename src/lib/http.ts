@@ -4,7 +4,7 @@ import { handleUnauthorized } from '../services/auth.service'
 import { getAccessTokenFromLocalStorage, normalizePath } from './utils'
 
 
-type ServiceName = 'identity' | 'menu' | 'order'
+type ServiceName = 'identity' | 'menu' | 'order' | 'reservation'
 type CustomOptions = Omit<RequestInit, 'method'> & {
     baseUrl?: string,
     service?: ServiceName
@@ -14,6 +14,7 @@ const SERVICE_BASE_URL: Record<ServiceName, string> = {
     identity: envConfig.NEXT_PUBLIC_API_IDENTITY,
     menu: envConfig.NEXT_PUBLIC_API_MENU,
     order: envConfig.NEXT_PUBLIC_API_ORDER,
+    reservation: envConfig.NEXT_PUBLIC_API_RESERVATION,
 }
 
 
@@ -92,6 +93,8 @@ const request = async <TResponse>(
     // const resolvedBaseUrl = baseUrl ?? envConfig.NEXT_PUBLIC_API_IDENTITY // Call API Gateway ????
     const resolvedBaseUrl = baseUrl
         ?? (options?.service ? SERVICE_BASE_URL[options.service] : envConfig.NEXT_PUBLIC_API_IDENTITY)
+
+
 
     const fullUrl = `${resolvedBaseUrl}/${normalizePath(url)}`
 

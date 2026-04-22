@@ -1,242 +1,181 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
+import { Search, Loader2, CalendarDays } from 'lucide-react'
 import { AdminHeader } from '@/src/components/admin/admin-header'
-import { Search, CalendarDays } from 'lucide-react'
+import DeleteReservationDialog from './components/delete_reservation'
+import TableReservation from "./components/table_reservation"
+import { ReservationDto, ReservationStatusType } from '@/src/schema/reservation.schema'
+import { useGetReservations } from '@/src/queries/useReservation'
 
-interface Reservation {
-  id: number
-  name: string
-  phone: string
-  tableNumber: number
-  tableCapacity: number
-  date: string
-  time: string
-  guests: number
-  note: string
-  status: 'pending' | 'confirmed' | 'cancelled'
-  createdAt: string
-}
+// Mock Data
+// const tablesData = [
+//   { id: 1, number: 1, capacity: 2, status: "Available", qrCode: "tbl-001" },
+//   { id: 2, number: 2, capacity: 4, status: "Available", qrCode: "tbl-002" },
+//   { id: 3, number: 3, capacity: 4, status: "Reserved", qrCode: "tbl-003" },
+//   { id: 4, number: 4, capacity: 6, status: "Available", qrCode: "tbl-004" },
+//   { id: 5, number: 5, capacity: 2, status: "Hidden", qrCode: "tbl-005" },
+//   { id: 6, number: 6, capacity: 8, status: "Available", qrCode: "tbl-006" },
+//   { id: 7, number: 7, capacity: 4, status: "Reserved", qrCode: "tbl-007" },
+//   { id: 8, number: 8, capacity: 2, status: "Available", qrCode: "tbl-008" },
+//   { id: 9, number: 9, capacity: 6, status: "Available", qrCode: "tbl-009" },
+//   { id: 10, number: 10, capacity: 4, status: "Hidden", qrCode: "tbl-010" },
+// ]
 
-const SEED_DATA: Reservation[] = [
-  { id: 1, name: "Nguyễn Văn A", phone: "0901 234 567", tableNumber: 5, tableCapacity: 4, date: "2024-12-20", time: "18:00", guests: 3, note: "Birthday dinner", status: "pending", createdAt: "2024-12-19T10:00:00Z" },
-  { id: 2, name: "Trần Thị B", phone: "0912 345 678", tableNumber: 2, tableCapacity: 2, date: "2024-12-20", time: "19:30", guests: 2, note: "", status: "confirmed", createdAt: "2024-12-19T11:00:00Z" },
-  { id: 3, name: "Lê Minh C", phone: "0923 456 789", tableNumber: 7, tableCapacity: 6, date: "2024-12-21", time: "12:00", guests: 5, note: "Window seat preferred", status: "pending", createdAt: "2024-12-19T12:00:00Z" },
-  { id: 4, name: "Phạm Thu D", phone: "0934 567 890", tableNumber: 10, tableCapacity: 8, date: "2024-12-21", time: "20:00", guests: 7, note: "Anniversary", status: "confirmed", createdAt: "2024-12-19T13:00:00Z" },
-  { id: 5, name: "Hoàng Văn E", phone: "0945 678 901", tableNumber: 4, tableCapacity: 4, date: "2024-12-22", time: "11:30", guests: 4, note: "", status: "cancelled", createdAt: "2024-12-19T14:00:00Z" },
-]
+// interface TableItem {
+//   id: number
+//   number: number
+//   capacity: number
+//   status: string
+//   qrCode: string
+// }
 
-export default function ReservationsPage() {
-  const [reservations, setReservations] = useState<Reservation[]>([])
+
+
+export default function ReservationPage() {
+  const router = useRouter()
   const [search, setSearch] = useState('')
   const [dateFilter, setDateFilter] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [page, setPage] = useState(1)
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
+  const [toDelete, setToDelete] = useState<ReservationDto | null>(null)
 
-    const stored = localStorage.getItem('vietgold_reservations')
-    if (stored) {
-      setReservations(JSON.parse(stored))
-    } else {
-      setReservations(SEED_DATA)
-      localStorage.setItem('vietgold_reservations', JSON.stringify(SEED_DATA))
-    }
-  }, [])
+  // Build query params for the API
+  const queryParams = useMemo(() => ({
+    page,
+    pageSize: 20,
+    ...(statusFilter !== 'all' ? { status: statusFilter as ReservationStatusType } : {}),
+    ...(dateFilter ? { fromDate: dateFilter, toDate: dateFilter } : {}),
+    ...(search.match(/^\d/) ? { guestPhone: search } : {}),
+  }), [page, statusFilter, dateFilter, search])
 
-  const filteredReservations = reservations
-    .filter(r =>
-      r.name.toLowerCase().includes(search.toLowerCase()) ||
-      r.phone.includes(search)
-    )
-    .filter(r => dateFilter ? r.date === dateFilter : true)
-    .filter(r => statusFilter === 'all' ? true : r.status === statusFilter)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
 
-  const totalBookings = reservations.length
-  const pendingCount = reservations.filter(r => r.status === 'pending').length
-  const todayCount = reservations.filter(r => r.date === new Date().toISOString().split('T')[0]).length
+  const { data, isLoading } = useGetReservations(queryParams)
 
-  const updateStatus = (id: number, newStatus: 'confirmed' | 'cancelled') => {
-    const updated = reservations.map(r =>
-      r.id === id ? { ...r, status: newStatus } : r
-    )
-    setReservations(updated)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('vietgold_reservations', JSON.stringify(updated))
-    }
-  }
+  const allReservations = data?.payload.data.data ?? []
 
-  const deleteReservation = (id: number) => {
-    const updated = reservations.filter(r => r.id !== id)
-    setReservations(updated)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('vietgold_reservations', JSON.stringify(updated))
-    }
-  }
+  const filtered = useMemo(() =>
+    search && !search.match(/^\d/)
+      ? allReservations.filter(r =>
+        r.guestName.toLowerCase().includes(search.toLowerCase()))
+      : allReservations,
+    [allReservations, search])
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return { bg: 'rgba(255, 192, 0, 0.12)', color: '#FFC000' }
-      case 'confirmed':
-        return { bg: 'rgba(34, 197, 94, 0.12)', color: '#22c55e' }
-      case 'cancelled':
-        return { bg: 'rgba(239, 68, 68, 0.12)', color: '#ef4444' }
-      default:
-        return { bg: 'rgba(255, 192, 0, 0.12)', color: '#FFC000' }
-    }
-  }
+  const totalBookings = data?.payload.data.total ?? 0
+  const totalPages = data?.payload.data.totalPages ?? 1
+  const pendingCount = filtered.filter(r => r.status === 'Booked').length
+  const todayCount = filtered.filter(r => {
+    const d = new Date(r.reservationDate)
+    const today = new Date()
+    return d.toDateString() === today.toDateString()
+  }).length
+
+
 
   return (
     <>
-      <AdminHeader title="RESERVATIONS" subtitle="Manage table bookings" />
+      <AdminHeader title="RESERVATIONS" subtitle="Quản lý lịch đặt bàn" />
+      <DeleteReservationDialog reservation={toDelete} onClose={() => setToDelete(null)} />
 
       <div style={{ padding: '32px 40px' }}>
         {/* Metric Cards */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, 1fr)',
-          gap: '16px',
-          marginBottom: '24px',
-        }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16, marginBottom: 24 }}>
           {[
-            { label: 'TOTAL BOOKINGS', value: totalBookings, color: '#F5F0E8' },
-            { label: 'PENDING', value: pendingCount, color: '#FFC000' },
-            { label: "TODAY'S BOOKINGS", value: todayCount, color: '#22c55e' },
-          ].map((metric, idx) => (
-            <div
-              key={idx}
-              style={{
-                backgroundColor: '#1A1714',
-                borderRadius: '10px',
-                padding: '16px 20px',
-                border: '1px solid rgba(255, 255, 255, 0.06)',
-              }}
-            >
-              <div
-                style={{
-                  fontSize: '10px',
-                  color: '#8A7F72',
-                  letterSpacing: '0.12em',
-                  marginBottom: '8px',
-                }}
-              >
-                {metric.label}
+            { label: 'TỔNG LỊCH ĐẶT', value: totalBookings, color: '#F5F0E8' },
+            { label: 'ĐANG CHỜ', value: pendingCount, color: '#FFC000' },
+            { label: 'HÔM NAY', value: todayCount, color: '#22c55e' },
+          ].map((m, i) => (
+            <div key={i} style={{
+              backgroundColor: '#1A1714', borderRadius: 10,
+              padding: '16px 20px',
+              border: '1px solid rgba(255,255,255,0.06)',
+            }}>
+              <div style={{ fontSize: 10, color: '#8A7F72', letterSpacing: '0.12em', marginBottom: 8 }}>
+                {m.label}
               </div>
-              <div
-                style={{
-                  fontSize: '28px',
-                  fontWeight: '700',
-                  color: metric.color,
-                }}
-              >
-                {metric.value}
+              <div style={{ fontSize: 28, fontWeight: 700, color: m.color }}>
+                {isLoading ? '...' : m.value}
               </div>
             </div>
           ))}
         </div>
 
         {/* Toolbar */}
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: '16px',
-          gap: '12px',
-        }}>
-          {/* Search */}
-          <div style={{
-            position: 'relative',
-            flex: 1,
-            maxWidth: '400px',
-          }}>
-            <Search
-              size={16}
-              style={{
-                position: 'absolute',
-                left: '8px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: '#8A7F72',
-              }}
-            />
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16, gap: 12 }}>
+          <div style={{ position: 'relative', flex: 1, maxWidth: 400 }}>
+            <Search size={16} style={{
+              position: 'absolute', left: 8, top: '50%',
+              transform: 'translateY(-50%)', color: '#8A7F72',
+            }} />
             <input
               type="text"
-              placeholder="Search by name or phone..."
+              placeholder="Tìm theo tên hoặc số điện thoại..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={e => { setSearch(e.target.value); setPage(1) }}
               style={{
                 backgroundColor: '#1A1714',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '6px',
-                height: '32px',
-                paddingLeft: '32px',
-                paddingRight: '12px',
-                fontSize: '13px',
-                color: '#F5F0E8',
-                width: '100%',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 6, height: 32,
+                paddingLeft: 32, paddingRight: 12,
+                fontSize: 13, color: '#F5F0E8', width: '100%',
               }}
             />
           </div>
-
-          {/* Filters */}
-          <div style={{ display: 'flex', gap: '8px' }}>
+          <div style={{ display: 'flex', gap: 8 }}>
             <input
               type="date"
               value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value)}
+              onChange={e => { setDateFilter(e.target.value); setPage(1) }}
               style={{
                 backgroundColor: '#1A1714',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '6px',
-                height: '32px',
-                padding: '0 12px',
-                fontSize: '13px',
-                color: '#F5F0E8',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 6, height: 32, padding: '0 12px',
+                fontSize: 13, color: '#F5F0E8',
               }}
             />
             <select
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
               style={{
                 backgroundColor: '#1A1714',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '6px',
-                height: '32px',
-                padding: '0 12px',
-                fontSize: '13px',
-                color: '#F5F0E8',
-                minWidth: '140px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 6, height: 32, padding: '0 12px',
+                fontSize: 13, color: '#F5F0E8', minWidth: 160,
               }}
             >
-              <option value="all">All Status</option>
-              <option value="pending">Pending</option>
-              <option value="confirmed">Confirmed</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="all">Tất cả trạng thái</option>
+              <option value="Booked">Đã đặt</option>
+              <option value="CheckedIn">Đã đến</option>
+              <option value="Cancelled">Đã hủy</option>
             </select>
           </div>
         </div>
 
         {/* Table */}
         <div style={{
-          backgroundColor: '#1A1714',
-          borderRadius: '10px',
-          overflow: 'hidden',
-          border: '1px solid rgba(255, 255, 255, 0.06)',
+          backgroundColor: '#1A1714', borderRadius: 10, overflow: 'hidden',
+          border: '1px solid rgba(255,255,255,0.06)',
         }}>
-          {filteredReservations.length === 0 ? (
+          {isLoading ? (
             <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '60px 20px',
-              color: '#8A7F72',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              padding: '60px 20px', color: '#8A7F72', gap: 12,
             }}>
-              <CalendarDays size={40} style={{ opacity: 0.3, marginBottom: '12px' }} />
-              <div style={{ fontSize: '14px' }}>No reservations found</div>
-              <div style={{ fontSize: '12px', opacity: 0.6, marginTop: '4px' }}>
-                Try adjusting your filters
+              <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
+              Đang tải...
+            </div>
+          ) : filtered.length === 0 ? (
+            <div style={{
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              padding: '60px 20px', color: '#8A7F72',
+            }}>
+              <CalendarDays size={40} style={{ opacity: 0.3, marginBottom: 12 }} />
+              <div style={{ fontSize: 14 }}>Không có lịch đặt nào</div>
+              <div style={{ fontSize: 12, opacity: 0.6, marginTop: 4 }}>
+                Thử thay đổi bộ lọc
               </div>
             </div>
           ) : (
@@ -245,195 +184,63 @@ export default function ReservationsPage() {
                 <thead>
                   <tr style={{
                     backgroundColor: '#110F0C',
-                    borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
-                    height: '40px',
+                    borderBottom: '1px solid rgba(255,255,255,0.06)',
+                    height: 40,
                   }}>
-                    <th style={{ padding: '0 16px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#8A7F72', letterSpacing: '0.08em' }}>GUEST</th>
-                    <th style={{ padding: '0 16px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#8A7F72', letterSpacing: '0.08em' }}>PHONE</th>
-                    <th style={{ padding: '0 16px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#8A7F72', letterSpacing: '0.08em' }}>TABLE</th>
-                    <th style={{ padding: '0 16px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#8A7F72', letterSpacing: '0.08em' }}>DATE & TIME</th>
-                    <th style={{ padding: '0 16px', textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#8A7F72', letterSpacing: '0.08em' }}>GUESTS</th>
-                    <th style={{ padding: '0 16px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#8A7F72', letterSpacing: '0.08em' }}>NOTE</th>
-                    <th style={{ padding: '0 16px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#8A7F72', letterSpacing: '0.08em' }}>STATUS</th>
-                    <th style={{ padding: '0 16px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#8A7F72', letterSpacing: '0.08em' }}>ACTIONS</th>
+                    {['KHÁCH', 'SĐT', 'BÀN', 'NGÀY GIỜ', 'SỐ KHÁCH', 'CỌC', 'GHI CHÚ', 'TRẠNG THÁI', 'THAO TÁC'].map(h => (
+                      <th key={h} style={{
+                        padding: '0 16px', textAlign: 'left',
+                        fontSize: 11, fontWeight: 700,
+                        color: '#8A7F72', letterSpacing: '0.08em',
+                      }}>
+                        {h}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredReservations.map((res) => {
-                    const statusColor = getStatusColor(res.status)
-                    const initials = res.name.split(' ').map(n => n[0]).join('')
-                    return (
-                      <tr
-                        key={res.id}
-                        style={{
-                          height: '56px',
-                          borderBottom: '1px solid rgba(255, 255, 255, 0.04)'
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(255, 192, 0, 0.03)'}
-                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
-                      >
-                        {/* Guest with Avatar */}
-                        <td style={{ padding: '0 16px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div
-                              style={{
-                                backgroundColor: 'rgba(255, 192, 0, 0.1)',
-                                color: '#FFC000',
-                                width: '32px',
-                                height: '32px',
-                                borderRadius: '999px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontWeight: '700',
-                                fontSize: '13px',
-                              }}
-                            >
-                              {initials}
-                            </div>
-                            <span style={{ fontSize: '13px', fontWeight: '600', color: '#F5F0E8' }}>
-                              {res.name}
-                            </span>
-                          </div>
-                        </td>
-                        {/* Phone */}
-                        <td style={{ padding: '0 16px', fontSize: '13px', color: '#8A7F72' }}>
-                          {res.phone}
-                        </td>
-                        {/* Table */}
-                        <td style={{ padding: '0 16px' }}>
-                          <span style={{
-                            backgroundColor: 'rgba(255, 192, 0, 0.1)',
-                            color: '#FFC000',
-                            fontWeight: '700',
-                            padding: '4px 10px',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                          }}>
-                            Table {res.tableNumber}
-                          </span>
-                        </td>
-                        {/* Date & Time */}
-                        <td style={{ padding: '0 16px' }}>
-                          <div style={{ fontSize: '13px', fontWeight: '500', color: '#F5F0E8' }}>
-                            {res.date}
-                          </div>
-                          <div style={{ fontSize: '11px', color: '#8A7F72', marginTop: '2px' }}>
-                            {res.time}
-                          </div>
-                        </td>
-                        {/* Guests */}
-                        <td style={{ padding: '0 16px', fontSize: '13px', color: '#F5F0E8', textAlign: 'center' }}>
-                          {res.guests}
-                        </td>
-                        {/* Note */}
-                        <td style={{
-                          padding: '0 16px',
-                          fontSize: '12px',
-                          color: '#8A7F72',
-                          maxWidth: '120px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                        }}>
-                          {res.note || '—'}
-                        </td>
-                        {/* Status */}
-                        <td style={{ padding: '0 16px' }}>
-                          <span style={{
-                            backgroundColor: statusColor.bg,
-                            color: statusColor.color,
-                            borderRadius: '999px',
-                            fontSize: '10px',
-                            fontWeight: '600',
-                            padding: '3px 10px',
-                            display: 'inline-block',
-                          }}>
-                            {res.status.toUpperCase()}
-                          </span>
-                        </td>
-                        {/* Actions */}
-                        <td style={{ padding: '0 16px' }}>
-                          <div style={{ display: 'flex', gap: '6px' }}>
-                            {res.status === 'pending' && (
-                              <>
-                                <button
-                                  onClick={() => updateStatus(res.id, 'confirmed')}
-                                  style={{
-                                    backgroundColor: '#FFC000',
-                                    color: '#000000',
-                                    fontSize: '11px',
-                                    fontWeight: '700',
-                                    padding: '4px 10px',
-                                    borderRadius: '6px',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    height: '28px',
-                                  }}
-                                >
-                                  CONFIRM
-                                </button>
-                                <button
-                                  onClick={() => updateStatus(res.id, 'cancelled')}
-                                  style={{
-                                    backgroundColor: 'transparent',
-                                    color: '#ef4444',
-                                    fontSize: '11px',
-                                    fontWeight: '700',
-                                    padding: '4px 10px',
-                                    borderRadius: '6px',
-                                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                                    cursor: 'pointer',
-                                    height: '28px',
-                                  }}
-                                >
-                                  CANCEL
-                                </button>
-                              </>
-                            )}
-                            {res.status === 'confirmed' && (
-                              <button
-                                onClick={() => updateStatus(res.id, 'cancelled')}
-                                style={{
-                                  backgroundColor: 'transparent',
-                                  color: '#ef4444',
-                                  fontSize: '11px',
-                                  fontWeight: '700',
-                                  padding: '4px 10px',
-                                  borderRadius: '6px',
-                                  border: '1px solid rgba(239, 68, 68, 0.3)',
-                                  cursor: 'pointer',
-                                  height: '28px',
-                                }}
-                              >
-                                CANCEL
-                              </button>
-                            )}
-                            {res.status === 'cancelled' && (
-                              <button
-                                onClick={() => deleteReservation(res.id)}
-                                style={{
-                                  backgroundColor: 'transparent',
-                                  color: '#8A7F72',
-                                  fontSize: '11px',
-                                  fontWeight: '700',
-                                  padding: '4px 10px',
-                                  borderRadius: '6px',
-                                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                                  cursor: 'pointer',
-                                  height: '28px',
-                                }}
-                              >
-                                DELETE
-                              </button>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    )
-                  })}
+                  {filtered.map(res => (
+                    <TableReservation key={res.id} res={res} onDelete={setToDelete} />
+                  ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              gap: 8, padding: '12px 16px',
+              borderTop: '1px solid rgba(255,255,255,0.06)',
+            }}>
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                style={{
+                  backgroundColor: 'transparent', color: '#F5F0E8',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 6, padding: '4px 12px', cursor: 'pointer',
+                  fontSize: 13, opacity: page <= 1 ? 0.4 : 1,
+                }}
+              >
+                ← Trước
+              </button>
+              <span style={{ fontSize: 13, color: '#8A7F72' }}>
+                Trang {page} / {totalPages}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                style={{
+                  backgroundColor: 'transparent', color: '#F5F0E8',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 6, padding: '4px 12px', cursor: 'pointer',
+                  fontSize: 13, opacity: page >= totalPages ? 0.4 : 1,
+                }}
+              >
+                Sau →
+              </button>
             </div>
           )}
         </div>

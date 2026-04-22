@@ -225,7 +225,7 @@ export default function HomePage() {
                 EXPLORE MENU →
               </button>
               <button
-                onClick={() => router.push("/reservation")}
+                onClick={() => router.push("/reservation_public")}
                 style={{
                   backgroundColor: "transparent",
                   color: "#F5F0E8",

@@ -43,7 +43,6 @@ const TableDish = (props: {
         deleteMutation.mutate(id)
     }
 
-
     return (
         <Table>
             <TableHeader>
