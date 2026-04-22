@@ -1,135 +1,29 @@
 "use client"
 
 import { useState } from "react"
-import Image from "next/image"
 import { AdminHeader } from "@/src/components/admin/admin-header"
 import { Button } from "@/src/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/src/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/src/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/src/components/ui/table"
-
-import { Switch } from "@/src/components/ui/switch"
-import { Search, Plus, Pencil, Trash2, Upload } from "lucide-react"
-import { cn } from "@/src/lib/utils"
+import { Search, Plus, ShieldCheck } from "lucide-react"
 import PaginationV1 from "@/src/components/pagination/pagination_v1"
-import { useGetAccounts } from "@/src/queries/useAccount"
+import { useGetAccounts, useGetMe } from "@/src/queries/useAccount"
 import TableAccount, { AccountItem } from "./components/table_account"
 import AddStaff from "@/src/components/admin/add-staff"
+import AddAdmin from "@/src/components/admin/add-admin"
 
-// Sample account data
-const accounts = [
-  {
-    id: 1,
-    name: "Nguyen Van An",
-    email: "an.nguyen@vietgold.com",
-    role: "owner",
-    joined: "2024-01-15",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 2,
-    name: "Tran Thi Binh",
-    email: "binh.tran@vietgold.com",
-    role: "employee",
-    joined: "2024-02-20",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 3,
-    name: "Le Minh Cuong",
-    email: "cuong.le@vietgold.com",
-    role: "employee",
-    joined: "2024-03-10",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 4,
-    name: "Pham Thi Dung",
-    email: "dung.pham@vietgold.com",
-    role: "employee",
-    joined: "2024-04-05",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-  {
-    id: 5,
-    name: "Hoang Van Em",
-    email: "em.hoang@vietgold.com",
-    role: "owner",
-    joined: "2024-01-01",
-    avatar: "/placeholder.svg?height=40&width=40",
-  },
-]
-
-function formatDate(dateString: string) {
-  return new Date(dateString).toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  })
-}
-
-function RolePill({ role }: { role: string }) {
-  const styles = {
-    owner: "bg-primary/20 text-primary rounded-full",
-    employee: "bg-white/8 text-foreground rounded-full",
-  }
-
-  return (
-    <span
-      className={cn(
-        "inline-flex px-3 py-1 text-xs font-bold uppercase tracking-wider",
-        styles[role as keyof typeof styles]
-      )}
-    >
-      {role}
-    </span>
-  )
-}
-
-function getInitials(name: string) {
-  return name
-    .split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2)
-}
 const PAGE_SIZE = 20
 
 export default function AccountsPage() {
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [changePasswordEnabled, setChangePasswordEnabled] = useState(false)
-  const [selectedAccount, setSelectedAccount] = useState<typeof accounts[0] | null>(null)
-
-
-  const [isAddOpen, setIsAddOpen] = useState(false)
+  const [isAddStaffOpen, setIsAddStaffOpen] = useState(false)
+  const [isAddAdminOpen, setIsAddAdminOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [page, setPage] = useState(1)
-  // Get all accounts
-  const { data, isLoading } = useGetAccounts({ page, pageSize: PAGE_SIZE });
-  const accountsData = data?.payload.data.data
 
-  let filteredAccounts = accountsData?.filter(
+  const { data, isLoading } = useGetAccounts({ page, pageSize: PAGE_SIZE })
+  const { data: meData } = useGetMe()
+  const myRole = meData?.payload.data.role  // "SuperAdmin" | "Admin" | "Staff"
+
+  const accountsData = data?.payload.data.data
+  const filteredAccounts = accountsData?.filter(
     (a) =>
       a.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       a.email.toLowerCase().includes(searchQuery.toLowerCase())
@@ -139,7 +33,6 @@ export default function AccountsPage() {
     page: data?.payload.data.page ?? 1,
     totalPages: data?.payload.data.totalPages ?? 1,
   }
-
 
   return (
     <div className="min-h-screen">
@@ -159,13 +52,30 @@ export default function AccountsPage() {
             />
           </div>
 
-          <Button
-            onClick={() => setIsAddOpen(true)}
-            className="h-10 gap-2 rounded-md bg-primary px-6 font-bold uppercase tracking-wide text-primary-foreground shadow-md transition-all hover:shadow-gold"
-          >
-            <Plus className="h-4 w-4" />
-            Tạo tài khoản
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Create Admin — SuperAdmin only */}
+            {myRole === 'SuperAdmin' && (
+              <Button
+                onClick={() => setIsAddAdminOpen(true)}
+                variant="outline"
+                className="h-10 gap-2 rounded-md border-primary/40 px-4 font-bold uppercase tracking-wide text-primary hover:bg-primary/10"
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Tạo Admin
+              </Button>
+            )}
+
+            {/* Create Staff — Admin & SuperAdmin */}
+            {(myRole === 'SuperAdmin' || myRole === 'Admin') && (
+              <Button
+                onClick={() => setIsAddStaffOpen(true)}
+                className="h-10 gap-2 rounded-md bg-primary px-6 font-bold uppercase tracking-wide text-primary-foreground shadow-md transition-all hover:shadow-gold"
+              >
+                <Plus className="h-4 w-4" />
+                Tạo Staff
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Table */}
@@ -175,14 +85,18 @@ export default function AccountsPage() {
               Đang tải...
             </div>
           ) : (
-            <TableAccount accounts={filteredAccounts as AccountItem[]} />
+            <TableAccount accounts={filteredAccounts as AccountItem[] ?? []} />
           )}
-          <PaginationV1 page={pagination.page} totalPages={pagination.totalPages} onPageChange={setPage} />
+          <PaginationV1
+            page={pagination.page}
+            totalPages={pagination.totalPages}
+            onPageChange={setPage}
+          />
         </div>
       </div>
 
-      {/* Add modal */}
-      <AddStaff isOpen={isAddOpen} onOpenChange={setIsAddOpen} />
+      <AddStaff isOpen={isAddStaffOpen} onOpenChange={setIsAddStaffOpen} />
+      <AddAdmin isOpen={isAddAdminOpen} onOpenChange={setIsAddAdminOpen} />
     </div>
   )
 }

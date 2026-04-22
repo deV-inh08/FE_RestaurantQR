@@ -3,7 +3,6 @@ import { RoleType } from "@/src/constants/role";
 import { Roles } from "@/src/constants/role";
 import { decodeToken } from "./lib/utils";
 
-// Định nghĩa các nhóm route
 const adminPaths = ['/admin']
 const loginPaths = ['/login']
 const privatePaths = [...adminPaths]
@@ -11,9 +10,9 @@ const privatePaths = [...adminPaths]
 export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl
 
-    // Đọc token từ cookie (được set bởi Next.js route handler khi login)
     const accessToken = request.cookies.get('accessToken')?.value
     const refreshToken = request.cookies.get('refreshToken')?.value
+
     /**
      * 1. Chưa đăng nhập mà vào private route → redirect về /login
      */
@@ -27,9 +26,9 @@ export async function middleware(request: NextRequest) {
      * 2. Đã đăng nhập (có refreshToken)
      */
     if (accessToken && refreshToken) {
-        // Decode để lấy role
         const decoded = decodeToken(accessToken) as { role: RoleType }
         const role = decoded?.role
+
         // 2.1 Đã login rồi thì không cho vào trang login nữa
         if (loginPaths.some((path) => pathname.startsWith(path)) && accessToken) {
             return NextResponse.redirect(new URL('/admin', request.url))
@@ -43,9 +42,10 @@ export async function middleware(request: NextRequest) {
             return NextResponse.redirect(url)
         }
 
-        // 2.3 Chỉ Admin/SuperAdmin mới được vào /admin
+        // 2.3 Chỉ Admin, SuperAdmin và Staff mới được vào /admin
         if (adminPaths.some((path) => pathname.startsWith(path))) {
-            if (role !== Roles.Admin && role !== Roles.SuperAdmin) {
+            const allowedRoles: RoleType[] = [Roles.Admin, Roles.SuperAdmin, Roles.Staff]
+            if (!allowedRoles.includes(role)) {
                 return NextResponse.redirect(new URL('/', request.url))
             }
         }
@@ -54,7 +54,6 @@ export async function middleware(request: NextRequest) {
     }
 }
 
-// Chỉ chạy middleware cho các path cần bảo vệ
 export const config = {
     matcher: ['/admin/:path*', '/login']
 }

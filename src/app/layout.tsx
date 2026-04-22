@@ -4,6 +4,7 @@ import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import AppProvider from '../components/app-provider';
 import { AdminSignalRProvider } from '../components/AdminSignalProvider'
+import { Toaster } from '@/src/components/ui/sonner'
 
 const _inter = Inter({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -43,6 +44,7 @@ export default function RootLayout({
           {children}
         </AppProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
+        <Toaster />
       </body>
     </html>
   )

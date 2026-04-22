@@ -1,73 +1,78 @@
 import { Upload, X } from "lucide-react"
-import { useState, useRef, useCallback, DragEvent, ChangeEvent } from "react"
+import { useState, useRef, useCallback, useEffect, DragEvent, ChangeEvent } from "react"
 
 interface ImageUploadProps {
     value: File | null
+    existingUrl?: string | null  // URL of the current saved image (for edit mode)
     onChange: (file: File | null) => void
 }
 
-const ImageUpload = ({ value, onChange }: ImageUploadProps) => {
+const ImageUpload = ({ value, existingUrl, onChange }: ImageUploadProps) => {
     const [isDragging, setIsDragging] = useState(false)
+    // preview: object URL for new file, or existingUrl for current image
     const [preview, setPreview] = useState<string | null>(null)
+    const [isObjectUrl, setIsObjectUrl] = useState(false)  // track if we need to revoke
     const inputRef = useRef<HTMLInputElement>(null)
 
-    // Xử lý file sau khi chọn — dùng chung cho cả click và drop
+    // Sync preview when existingUrl changes (e.g., opening a different dish dialog)
+    useEffect(() => {
+        if (value) {
+            // New file takes precedence — createObjectURL
+            const url = URL.createObjectURL(value)
+            setPreview(url)
+            setIsObjectUrl(true)
+        } else {
+            // No new file: show existing URL if available
+            setPreview(existingUrl ?? null)
+            setIsObjectUrl(false)
+        }
+
+        return () => {
+            // Cleanup object URL on unmount or value change
+            if (isObjectUrl && preview) URL.revokeObjectURL(preview)
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [value, existingUrl])
+
     const processFile = useCallback((file: File) => {
-        // Validate type
         if (!["image/png", "image/jpeg"].includes(file.type)) {
             alert("Only PNG and JPG are allowed")
             return
         }
-        // Validate size (5MB = 5 * 1024 * 1024 bytes)
         if (file.size > 5 * 1024 * 1024) {
             alert("File size must be under 5MB")
             return
         }
-
-        // createObjectURL tạo ra một URL tạm thời trỏ vào bộ nhớ
-        // Hiệu quả hơn FileReader vì không cần decode base64
-        const objectUrl = URL.createObjectURL(file)
-        setPreview(objectUrl)
         onChange(file)
+        // Preview is handled by the useEffect above
     }, [onChange])
 
-    // --- Drag & Drop handlers ---
     const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
-        e.preventDefault() // BẮT BUỘC — nếu không preventDefault, onDrop sẽ không fire
+        e.preventDefault()
         setIsDragging(true)
     }
-
     const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
         e.preventDefault()
         setIsDragging(false)
     }
-
     const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-        e.preventDefault() // Ngăn browser mở file trong tab mới
+        e.preventDefault()
         setIsDragging(false)
-
-        // e.dataTransfer.files là FileList, lấy file đầu tiên
         const file = e.dataTransfer.files[0]
         if (file) processFile(file)
     }
-
-    // --- Click to open file picker ---
-    const handleClick = () => {
-        inputRef.current?.click()
-    }
-
+    const handleClick = () => inputRef.current?.click()
     const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0]
         if (file) processFile(file)
-        // Reset input để cho phép chọn lại cùng 1 file
         e.target.value = ""
     }
 
-    // --- Remove image ---
     const handleRemove = (e: React.MouseEvent) => {
-        e.stopPropagation() // Tránh trigger handleClick của parent div
-        if (preview) URL.revokeObjectURL(preview) // Giải phóng bộ nhớ
-        setPreview(null)
+        e.stopPropagation()
+        if (isObjectUrl && preview) URL.revokeObjectURL(preview)
+        setPreview(existingUrl ?? null)  // fall back to existing URL
+        setIsObjectUrl(false)
         onChange(null)
     }
 
@@ -86,7 +91,6 @@ const ImageUpload = ({ value, onChange }: ImageUploadProps) => {
                 }
       `}
         >
-            {/* Hidden native input */}
             <input
                 ref={inputRef}
                 type="file"
@@ -96,22 +100,29 @@ const ImageUpload = ({ value, onChange }: ImageUploadProps) => {
             />
 
             {preview ? (
-                // Preview state
                 <>
-                    <img
-                        src={preview}
-                        alt="Preview"
-                        className="h-full w-full rounded-md object-cover"
-                    />
+                    <img src={preview} alt="Preview" className="h-full w-full rounded-md object-cover" />
+                    {/* Only show remove if user uploaded a new file OR there's an existing image */}
                     <button
                         onClick={handleRemove}
                         className="absolute right-2 top-2 rounded-full bg-black/60 p-1 text-white hover:bg-black/80"
+                        title={value ? "Xóa ảnh mới" : "Giữ ảnh hiện tại"}
                     >
                         <X className="h-3 w-3" />
                     </button>
+                    {/* Badge to indicate source */}
+                    {!value && existingUrl && (
+                        <span className="absolute bottom-2 left-2 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
+                            Ảnh hiện tại
+                        </span>
+                    )}
+                    {value && (
+                        <span className="absolute bottom-2 left-2 rounded bg-primary/80 px-1.5 py-0.5 text-[10px] text-black font-bold">
+                            Ảnh mới
+                        </span>
+                    )}
                 </>
             ) : (
-                // Empty state
                 <>
                     <Upload className={`mb-2 h-8 w-8 ${isDragging ? "text-gold-primary" : "text-muted-foreground"}`} />
                     <span className="text-sm text-muted-foreground">
@@ -124,4 +135,4 @@ const ImageUpload = ({ value, onChange }: ImageUploadProps) => {
     )
 }
 
-export default ImageUpload;
+export default ImageUpload

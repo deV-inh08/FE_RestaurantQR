@@ -3,6 +3,7 @@ import http from '../lib/http'
 import {
     AccountListResType, AccountResType,
     ChangePasswordBodyType,
+    CreateAdminBodyType,
     CreateStaffBodyType,
     UpdateEmployeeBodyType,
     UpdateProfileBodyType
@@ -33,6 +34,9 @@ const accountApiRequest = {
             service: 'identity'
         }),
 
+    // ─── Admin CRUD (SuperAdmin only) ─────────────────  ← NEW
+    createAdmin: (body: CreateAdminBodyType) =>
+        http.post<AccountResType>('/account/admin', body, { service: 'identity' }),
 
 
     // ─── Staff CRUD (Admin manages Staff) ────────────

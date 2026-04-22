@@ -17,6 +17,7 @@ import { useEffect, useState } from "react"
 import { DishDto, UpdateDishBodyType } from "@/src/schema/dish.schema"
 import { useUpdateDishMutation } from "@/src/queries/useDish"
 import { toast } from "sonner"
+import ImageUpload from "./upload_image"
 
 const UpdateDish = (props: {
     isUpdateModalOpen: boolean;
@@ -29,7 +30,7 @@ const UpdateDish = (props: {
         name: "",
         price: 0,
         description: "",
-        imagePath: null,
+        image: null,
         category: "MainCourse",
     })
 
@@ -39,14 +40,14 @@ const UpdateDish = (props: {
         { label: "Beverage", value: "Beverage" },
     ]
 
-    // Populate form when dish prop changes
+    // Populate form when dish changes
     useEffect(() => {
         if (dish) {
             setEditDish({
                 name: dish.name,
                 price: dish.price,
                 description: dish.description ?? "",
-                imagePath: dish.imagePath ?? null,
+                image: null,          // reset to null — existing image shown via existingUrl prop
                 category: dish.category,
             })
         }
@@ -67,6 +68,13 @@ const UpdateDish = (props: {
         )
     }
 
+    // Build preview URL for the existing image
+    const existingImageUrl = dish?.imagePath
+        ? dish.imagePath.startsWith('http')
+            ? dish.imagePath
+            : `http://localhost:3002${dish.imagePath}`
+        : null
+
     return (
         <Dialog open={isUpdateModalOpen} onOpenChange={setIsUpdateModalOpen}>
             <DialogContent className="max-w-lg rounded-lg border-border-subtle bg-card p-0 shadow-modal">
@@ -85,9 +93,7 @@ const UpdateDish = (props: {
                         <input
                             type="text"
                             value={editDish.name}
-                            onChange={(e) =>
-                                setEditDish({ ...editDish, name: e.target.value })
-                            }
+                            onChange={(e) => setEditDish({ ...editDish, name: e.target.value })}
                             placeholder="Enter dish name"
                             className="h-10 w-full rounded-md border border-input-border bg-input px-4 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:border-primary focus:ring-2 focus:ring-gold-primary/20 focus:outline-none"
                         />
@@ -101,9 +107,7 @@ const UpdateDish = (props: {
                         <input
                             type="number"
                             value={editDish.price}
-                            onChange={(e) =>
-                                setEditDish({ ...editDish, price: Number(e.target.value) })
-                            }
+                            onChange={(e) => setEditDish({ ...editDish, price: Number(e.target.value) })}
                             placeholder="Enter price"
                             className="h-10 w-full rounded-md border border-input-border bg-input px-4 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:border-primary focus:ring-2 focus:ring-gold-primary/20 focus:outline-none"
                         />
@@ -144,13 +148,26 @@ const UpdateDish = (props: {
                         </label>
                         <textarea
                             value={editDish.description}
-                            onChange={(e) =>
-                                setEditDish({ ...editDish, description: e.target.value })
-                            }
+                            onChange={(e) => setEditDish({ ...editDish, description: e.target.value })}
                             placeholder="Enter dish description"
                             rows={3}
                             className="w-full resize-none rounded-md border border-input-border bg-input px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:border-primary focus:ring-2 focus:ring-gold-primary/20 focus:outline-none"
                         />
+                    </div>
+
+                    {/* Image Upload — NEW */}
+                    <div className="space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                            Image
+                        </label>
+                        <ImageUpload
+                            value={editDish.image instanceof File ? editDish.image : null}
+                            existingUrl={existingImageUrl}
+                            onChange={(file) => setEditDish({ ...editDish, image: file })}
+                        />
+                        <p className="text-xs text-muted-foreground">
+                            Upload a new image to replace the current one, or leave as-is to keep it.
+                        </p>
                     </div>
                 </div>
 
@@ -165,9 +182,10 @@ const UpdateDish = (props: {
                     <Button
                         type="submit"
                         onClick={handleUpdateDish}
+                        disabled={updateMutation.isPending}
                         className="rounded-md bg-primary font-bold uppercase tracking-wide text-primary-foreground shadow-md hover:shadow-gold"
                     >
-                        Update Dish
+                        {updateMutation.isPending ? 'Updating...' : 'Update Dish'}
                     </Button>
                 </DialogFooter>
             </DialogContent>

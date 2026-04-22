@@ -9,6 +9,7 @@ export interface OrderDto {
     dishSnapshotId: number
     dishName?: string
     dishPrice: number
+    dishImage?: string | null   // ← was missing
     accountId: number | null
     quantity: number
     status: string
@@ -25,14 +26,13 @@ const orderSchema = z.object({
     dishSnapshotId: z.number(),
     dishName: z.string().optional(),
     dishPrice: z.number(),
+    dishImage: z.string().nullable().optional(),   // ← was missing
     accountId: z.number().nullable(),
     quantity: z.number(),
     status: z.string(),
     createdAt: z.string(),
     updatedAt: z.string()
 })
-
-
 
 export const OrderListRes = z.object({
     data: z.array(orderSchema),
@@ -44,21 +44,16 @@ export const OrderListRes = z.object({
 })
 export type OrderListResType = z.TypeOf<typeof OrderListRes>
 
-
-
 export const OrderRes = z.object({
     data: orderSchema,
     message: z.string()
 })
 export type OrderResType = z.TypeOf<typeof OrderRes>
 
-
-
 export const UpdateOrderStatusBody = z.object({
     status: z.enum(['Pending', 'Preparing', 'Served', 'Cancelled']),
     accountId: z.number().nullable().optional()
 })
-
 export type UpdateOrderStatusBodyType = z.TypeOf<typeof UpdateOrderStatusBody>
 
 export const OrderStatus = {
@@ -67,8 +62,6 @@ export const OrderStatus = {
     Served: 'Served',
     Cancelled: 'Cancelled'
 }
-
-
 
 export interface CreateOrderRequest {
     tableId: number
@@ -81,5 +74,4 @@ export const CreateOrderBodySchema = z.object({
     dishSnapshotId: z.number().int().positive('Dish snapshot ID must be positive'),
     quantity: z.number().int().positive('Quantity must be at least 1')
 })
-
 export type CreateOrderBodyType = z.TypeOf<typeof CreateOrderBodySchema>

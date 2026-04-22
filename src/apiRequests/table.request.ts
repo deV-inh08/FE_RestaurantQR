@@ -16,6 +16,9 @@ const tableApiRequest = {
     updateStatus: (id: number, body: UpdateTableStatusBodyType) =>
         http.patch<TableResType>(`/table/${id}/status`, body, { service: 'order' }),
 
+    // ← NEW: toggle isVisibleOnReservation
+    updateVisibility: (id: number, isVisibleOnReservation: boolean) =>
+        http.patch<TableResType>(`/table/${id}/visibility`, { isVisibleOnReservation }, { service: 'order' }),
     /** Staff calls reset when a guest leaves — generates new SessionId, sets status Hidden */
     reset: (id: number) =>
         http.patch<TableResType>(`/table/${id}/reset`, null, { service: 'order' }),

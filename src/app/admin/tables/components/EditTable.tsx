@@ -1,7 +1,7 @@
 import envConfig from "@/src/config";
 import { handleErrorApi } from "@/src/lib/utils";
 import { useResetTableMutation, useUpdateTableStatusMutation } from "@/src/queries/useTable";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
     Dialog,
@@ -21,6 +21,7 @@ import { TableDto } from "@/src/schema/table.schema";
 import { Button } from "@/src/components/ui/button";
 import { QRCodeSVG } from "qrcode.react";
 import { RefreshCw } from "lucide-react";
+import { Switch } from "@/src/components/ui/switch";
 
 
 const STATUS_LABELS: Record<string, string> = {
@@ -29,8 +30,16 @@ const STATUS_LABELS: Record<string, string> = {
 // ─── Edit Table modal ───────────────────────────────
 export const EditTableModal = ({ table, onClose }: { table: TableDto | null; onClose: () => void }) => {
     const [status, setStatus] = useState(table?.status ?? 'Available')
+    const [isVisible, setIsVisible] = useState(table?.isVisibleOnReservation ?? true)
     const updateStatusMutation = useUpdateTableStatusMutation()
     const resetMutation = useResetTableMutation()
+
+    useEffect(() => {
+        if (table) {
+            setStatus(table.status)
+            setIsVisible(table.isVisibleOnReservation)
+        }
+    }, [table])
 
     const url = table ? `${envConfig.NEXT_PUBLIC_URL}/table/${table.id}/welcome` : ''
 
@@ -75,6 +84,19 @@ export const EditTableModal = ({ table, onClose }: { table: TableDto | null; onC
                             </Button>
                         </div>
                     )}
+                    {/* Visibility toggle — NEW */}
+                    <div className="flex items-center justify-between rounded-md border border-border-subtle p-3">
+                        <div>
+                            <p className="text-sm font-medium text-foreground">Hiển thị khi đặt bàn</p>
+                            <p className="text-xs text-muted-foreground">
+                                Bàn này xuất hiện trong trang đặt bàn trực tuyến
+                            </p>
+                        </div>
+                        <Switch
+                            checked={isVisible}
+                            onCheckedChange={setIsVisible}
+                        />
+                    </div>
                     {/* Status */}
                     <div>
                         <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Trạng thái</label>

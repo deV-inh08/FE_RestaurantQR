@@ -46,10 +46,20 @@ const dishApiRequest = {
     },
 
     // ─── UPDATE dish ──────────────────────────────────────────────────────────
-    // Backend UpdateDishRequest dùng [FromBody] JSON (không phải [FromForm])
-    // nên gửi JSON bình thường — KHÔNG dùng FormData.
-    updateDish: (id: number, body: UpdateDishBodyType) =>
-        http.put<DishResType>(`/menu/dishes/${id}`, body, { service: 'menu' }),
+    // UPDATE — now also multipart/form-data (backend changed to [FromForm])
+    // If body.image is a File → upload new image
+    // If body.image is null/undefined → backend keeps existing image
+    updateDish: (id: number, body: UpdateDishBodyType) => {
+        const formData = new FormData()
+        formData.append('name', body.name.trim())
+        formData.append('price', String(body.price))
+        formData.append('description', body.description ?? '')
+        formData.append('category', body.category)
+        if (body.image instanceof File) {
+            formData.append('image', body.image, body.image.name)
+        }
+        return http.put<DishResType>(`/menu/dishes/${id}`, formData, { service: 'menu' })
+    },
 
     // ─── UPDATE status only (PATCH) ───────────────────────────────────────────
     updateStatusDish: (

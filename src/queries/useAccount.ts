@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import accountApiRequest from '../apiRequests/account.request'
 import {
     ChangePasswordBodyType,
+    CreateAdminBodyType,
     CreateStaffBodyType,
     UpdateEmployeeBodyType,
     UpdateProfileBodyType
@@ -41,6 +42,15 @@ export const useGetMe = () =>
     })
 
 // ─── Mutations ─────────────────────────────────────
+export const useCreateAdminMutation = () => {
+    const queryClient = useQueryClient()
+    return useMutation({
+        mutationFn: (body: CreateAdminBodyType) => accountApiRequest.createAdmin(body),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: accountKeys.allAccounts })
+        }
+    })
+}
 export const useCreateStaffMutation = () => {
     const queryClient = useQueryClient()
     return useMutation({

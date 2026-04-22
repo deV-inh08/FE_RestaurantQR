@@ -38,6 +38,16 @@ export const useUpdateTableStatusMutation = () => {
     })
 }
 
+// update table visibility
+export const useUpdateTableVisibilityMutation = () => {
+    const qc = useQueryClient()
+    return useMutation({
+        mutationFn: ({ id, isVisibleOnReservation }: { id: number; isVisibleOnReservation: boolean }) =>
+            tableApiRequest.updateVisibility(id, isVisibleOnReservation),
+        onSuccess: () => qc.invalidateQueries({ queryKey: tableKeys.allTables })
+    })
+}
+
 export const useResetTableMutation = () => {
     const qc = useQueryClient()
     return useMutation({

@@ -30,6 +30,24 @@ export const AccountRes = z.object({
 })
 export type AccountResType = z.TypeOf<typeof AccountRes>
 
+export const CreateAdminBody = z
+    .object({
+        name: z.string().trim().min(2).max(256),
+        email: z.string().email('Email không hợp lệ'),
+        password: z.string().min(6, 'Mật khẩu tối thiểu 6 ký tự').max(100),
+        confirmPassword: z.string().min(6).max(100)
+    })
+    .superRefine(({ confirmPassword, password }, ctx) => {
+        if (confirmPassword !== password) {
+            ctx.addIssue({
+                code: 'custom',
+                message: 'Mật khẩu không khớp',
+                path: ['confirmPassword']
+            })
+        }
+    })
+export type CreateAdminBodyType = z.TypeOf<typeof CreateAdminBody>
+
 // ─── Create Staff (Admin creates Staff) ────────────
 export const CreateStaffBody = z
     .object({

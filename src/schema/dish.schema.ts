@@ -25,15 +25,18 @@ export const CreateDishBody = z.object({
 export type CreateDishBodyType = z.TypeOf<typeof CreateDishBody>
 
 // ─── Update ───────────────────────────────────────────────────────────────────
-// Gửi JSON ([FromBody]) → image là string URL hoặc null (không upload file)
 export const UpdateDishBody = z.object({
     name: z.string().min(1).max(256),
     price: z.number().int().positive('Giá phải lớn hơn 0'),
     description: z.string().max(1000).optional().default(''),
-    imagePath: z.string().url().nullable().optional(),  // URL string, match với backend field
+    // image: File = upload new image; null/undefined = keep existing
+    image: z.union([
+        z.instanceof(File),
+        z.null(),
+        z.undefined(),
+    ]).optional(),
     category: z.enum(CategoryStatusValues),
 })
-
 export type UpdateDishBodyType = z.TypeOf<typeof UpdateDishBody>
 
 // ─── Response ─────────────────────────────────────────────────────────────────
