@@ -2,6 +2,7 @@
 
 import { Bell, Search } from "lucide-react"
 import { Button } from "@/src/components/ui/button"
+import { NotificationBell } from "./NotificationBellAdmin"
 
 interface AdminHeaderProps {
   title: string
@@ -32,16 +33,7 @@ export function AdminHeader({ title, subtitle }: AdminHeaderProps) {
         </div>
 
         {/* Notifications */}
-        <Button
-          variant="outline"
-          size="icon"
-          className="relative rounded-md border-border-subtle hover:bg-gold-subtle hover:text-foreground"
-        >
-          <Bell className="h-4 w-4" />
-          <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-            3
-          </span>
-        </Button>
+        <NotificationBell />
 
         {/* Admin Avatar */}
         <div className="flex items-center gap-3 border-l border-border-subtle pl-4">

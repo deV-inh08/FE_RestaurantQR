@@ -13,6 +13,7 @@ import { useGetDishes } from '@/src/queries/useDish'
 import guestApiRequest from '@/src/apiRequests/guest.request'
 import http from '@/src/lib/http'
 import envConfig from '@/src/config'
+import { useGetIdDishSnapshot } from '@/src/queries/useDishSnapshot'
 
 // ─── Category labels ────────────────────────────────
 const CATEGORY_LABELS: Record<string, string> = {
@@ -67,6 +68,7 @@ export default function GuestMenuPage() {
     return s + (dish?.price ?? 0) * i.quantity
   }, 0)
 
+
   // ── Place order mutation ─────────────────────────
   // Dùng useMutation trực tiếp vì đây là guest action riêng biệt,
   // không share với admin orderApiRequest
@@ -79,15 +81,16 @@ export default function GuestMenuPage() {
       // Promise.all để gọi song song, không tuần tự
       await Promise.all(items.map(async item => {
         // Lấy snapshot mới nhất của dish này từ Menu.API
+        // const idDishSnapshot = useGetIdDishSnapshot(item.dishId)
         const snapshotRes = await http.get<{ message: string; data: { id: number } }>(
-          `/api/v1/dish-snapshot/by-dish/${item.dishId}`,
+          `/dish-snapshot/by-dish/${item.dishId}`,
           { service: 'menu' }
         )
         const snapshotId = snapshotRes.payload.data.id
 
         // Tạo order với Guest JWT
         return http.post(
-          '/api/v1/order',
+          '/order',
           { dishSnapshotId: snapshotId, quantity: item.quantity },
           {
             service: 'order',
@@ -99,6 +102,7 @@ export default function GuestMenuPage() {
     onSuccess: () => {
       toast.success(`Đã đặt ${totalItems} món!`)
       setCart([])
+      router.push(`/table/${tableId}/orders`)
     },
     onError: (error: any) => {
       if (error?.status === 401) {
