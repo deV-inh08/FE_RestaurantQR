@@ -4,6 +4,7 @@ import {
     removeTokensFromLS, setAccessTokenToLocalStorage, setRefreshTokenToLocalStorage
 } from '../lib/utils'
 import guestApiRequest from '../apiRequests/guest.request'
+import { toast } from 'sonner'
 
 function extractTableIdFromPath(): string {
     const match = window.location.pathname.match(/^\/table\/(\d+)/)
@@ -32,6 +33,11 @@ export async function handleUnauthorized(tokenFromHeader: string | null): Promis
                 return
             } catch {
                 // Refresh thất bại → xóa session, redirect về welcome
+                clearGuestSession()
+                toast.error("Session đã hết hạn, vui lòng đăng nhập lại")
+                const tableId = extractTableIdFromPath()
+                window.location.href = `/table/${tableId}`
+                return
             }
         }
 
@@ -47,7 +53,7 @@ export async function handleUnauthorized(tokenFromHeader: string | null): Promis
             .then(() => {
                 removeTokensFromLS()
                 const locale = getClientCookie('NEXT_LOCALE') ?? 'en'
-                location.href = `/${locale}/login`
+                location.href = `/login`
             })
             .finally(() => {
                 clientLogoutRequest = null

@@ -3,19 +3,16 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useGetDishes } from "../queries/useDish"
-import Image from "next/image"
-import envConfig from "../config"
-import { handleImageURL } from "../lib/utils"
 
 
 export default function HomePage() {
   const router = useRouter()
   const { data, isLoading } = useGetDishes()
+
   const featuredDishes = (data?.payload.data.data ?? [])
     .filter((d) => d.status === "Available")
     .slice(0, 3)
 
-  console.log('featuredDishes_______________________________', featuredDishes)
   return (
     <div style={{ backgroundColor: "#0D0B08", color: "#F5F0E8" }}>
       {/* Header */}

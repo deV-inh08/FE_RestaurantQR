@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { Spinner } from "@/src/components/ui/spinner"
 import { Eye, EyeOff } from "lucide-react"
 import { useForm } from 'react-hook-form'
 import { Form, FormField, FormItem, FormMessage } from '../../components/ui/form'
@@ -16,6 +17,7 @@ export default function LoginPage() {
   const router = useRouter()
   const setRole = useAppProviderStore((state) => state.setRole);
   const [showPassword, setShowPassword] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   const form = useForm<LoginBodyType>({
     resolver: zodResolver(LoginBodySchema),
@@ -28,8 +30,10 @@ export default function LoginPage() {
 
   const handleSubmit = async (data: LoginBodyType) => {
     try {
+      setIsLoading(true)
       const res = await loginMutation.mutateAsync(data)
       if (res.payload.data) {
+        setIsLoading(false)
         const { accessToken, refreshToken, account } = res.payload.data;
         setAccessTokenToLocalStorage(accessToken)
         setRefreshTokenToLocalStorage(refreshToken)
@@ -145,12 +149,12 @@ export default function LoginPage() {
 
               {/* Submit */}
               <button
+                disabled={isLoading}
                 type="submit"
                 // disabled={loginMutation.isPending}
-                className="w-full rounded-md bg-primary px-4 py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground shadow-md transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full flex items-center justify-center gap-x-2 cursor-pointer rounded-md bg-primary px-4 py-3 text-sm font-bold uppercase tracking-wide text-primary-foreground shadow-md transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {/* {loginMutation.isPending ? "Signing In..." : ""} */}
-                Sign In
+                {isLoading ? <Spinner /> : "Sign In"}
               </button>
 
             </form>

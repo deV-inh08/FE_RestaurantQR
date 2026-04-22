@@ -3,8 +3,8 @@ import { Inter, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 import AppProvider from '../components/app-provider';
-import { AdminSignalRProvider } from '../components/AdminSignalProvider'
 import { Toaster } from '@/src/components/ui/sonner'
+import { ThemeProvider } from '../components/theme-provider'
 
 const _inter = Inter({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -38,13 +38,15 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-background">
+    <html lang="en" className="bg-background" suppressHydrationWarning>
       <body className="font-sans antialiased bg-background text-foreground">
-        <AppProvider>
-          {children}
-        </AppProvider>
-        {process.env.NODE_ENV === 'production' && <Analytics />}
-        <Toaster />
+        <ThemeProvider>
+          <AppProvider>
+            {children}
+          </AppProvider>
+          {process.env.NODE_ENV === 'production' && <Analytics />}
+          <Toaster />
+        </ThemeProvider>
       </body>
     </html>
   )
