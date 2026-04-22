@@ -9,6 +9,7 @@ import { useGetAccounts, useGetMe } from "@/src/queries/useAccount"
 import TableAccount, { AccountItem } from "./components/table_account"
 import AddStaff from "@/src/components/admin/add-staff"
 import AddAdmin from "@/src/components/admin/add-admin"
+import { TableSkeleton } from "@/src/components/Skeleton/skeleton"
 
 const PAGE_SIZE = 20
 
@@ -81,9 +82,7 @@ export default function AccountsPage() {
         {/* Table */}
         <div className="rounded-md border border-border-subtle bg-card shadow-card">
           {isLoading ? (
-            <div className="flex items-center justify-center py-16 text-muted-foreground">
-              Đang tải...
-            </div>
+            <TableSkeleton rows={8} cols={6} />
           ) : (
             <TableAccount accounts={filteredAccounts as AccountItem[] ?? []} />
           )}

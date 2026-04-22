@@ -29,6 +29,7 @@ import { STATUS_ORDER_STYLE, StatusBadge, ViewOrderModal } from "./components/vi
 import { EditOrderModal } from "./components/editOrder"
 import { OrderDto } from "@/src/schema/order.schema"
 import TableStatusGrid from "./components/TableStatusGrid"
+import { OrderRowSkeleton } from "@/src/components/Skeleton/skeleton"
 
 
 
@@ -175,7 +176,14 @@ export default function OrdersPage() {
 
           <div className="rounded-md border border-border-subtle bg-card shadow-card">
             {isLoading ? (
-              <div className="flex items-center justify-center py-16 text-muted-foreground">Đang tải...</div>
+              <div className="w-full">
+                <div className="flex items-center gap-4 border-b border-border-subtle px-4 py-3">
+                  {['ORDER ID', 'TABLE', 'GUEST', 'ITEMS', 'TOTAL', 'STATUS', 'TIME', 'ACTIONS'].map(h => (
+                    <div key={h} className="flex-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">{h}</div>
+                  ))}
+                </div>
+                <OrderRowSkeleton rows={8} />
+              </div>
             ) : (
               <Table>
                 <TableHeader>

@@ -22,6 +22,7 @@ import { AddTableModal } from "./components/AddTable"
 import { EditTableModal } from "./components/EditTable"
 import { DeleteTableDialog } from "./components/DeleteTableDialog"
 import QRPreview from "./components/QR_Preview"
+import { TableSkeleton } from "@/src/components/Skeleton/skeleton"
 
 function StatusPill({ status }: { status: string }) {
   const styles: Record<string, string> = {
@@ -81,7 +82,7 @@ export default function TablesPage() {
 
         <div className="rounded-md border border-border-subtle bg-card shadow-card">
           {isLoading ? (
-            <div className="flex items-center justify-center py-16 text-muted-foreground">Đang tải...</div>
+            <TableSkeleton rows={8} cols={5} />
           ) : (
             <Table>
               <TableHeader>
