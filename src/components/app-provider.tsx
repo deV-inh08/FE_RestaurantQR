@@ -37,7 +37,7 @@ const queryClient = new QueryClient({
 
 function AppProvider({ children }: { children: React.ReactNode }) {
 
-    const [role, setRole] = useState<RoleType | undefined>()
+    const setRole = useAppProviderStore((state) => state.setRole)
 
     useEffect(() => {
         const accessToken = getAccessTokenFromLocalStorage()
@@ -45,7 +45,7 @@ function AppProvider({ children }: { children: React.ReactNode }) {
             const decodeAccessToken = decodeToken(accessToken) as { role: RoleType }
             setRole(decodeAccessToken.role)
         }
-    }, [role])
+    }, [])
 
     return (
         <QueryClientProvider client={queryClient}>

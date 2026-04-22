@@ -3,8 +3,7 @@
  *
  * Quản lý notification badge + danh sách order mới cho Staff.
  * Dùng Zustand để share state giữa Sidebar và OrderPage.
- *
- * Cài thêm: npm install zustand (nếu chưa có)
+ * 
  * Dự án đang dùng zustand rồi (thấy trong app-provider.tsx)
  */
 

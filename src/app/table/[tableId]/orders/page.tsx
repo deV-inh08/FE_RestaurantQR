@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
@@ -10,6 +10,10 @@ import { cn, formatCurrency } from '@/src/lib/utils'
 import { getGuestAccessToken, isGuestLoggedIn } from '@/src/lib/guest-session'
 import { useGetMyOrders } from '@/src/queries/useGuest'
 import envConfig from '@/src/config'
+import { useQueryClient } from '@tanstack/react-query'
+import { guestKeys } from '@/src/queries/useGuest'
+import { OrderDto } from '@/src/schema/order.schema'
+import { useOrderSignalR } from '@/src/hooks/useOrderSignalR'
 
 // ─── Status config ──────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
@@ -18,6 +22,8 @@ const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   Served: { label: 'Đã phục vụ', cls: 'bg-green-500/20 text-green-400' },
   Cancelled: { label: 'Đã hủy', cls: 'bg-destructive/20 text-destructive' },
 }
+
+
 
 function StatusPill({ status }: { status: string }) {
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.Pending
@@ -37,6 +43,7 @@ export default function GuestOrdersPage() {
   const router = useRouter()
   const tableId = params.tableId as string
 
+  const queryClient = useQueryClient()
   // Guard
   useEffect(() => {
     if (!isGuestLoggedIn()) router.replace(`/table/${tableId}/welcome`)
@@ -54,6 +61,36 @@ export default function GuestOrdersPage() {
       router.replace(`/table/${tableId}/welcome`)
     }
   }, [error, tableId, router])
+
+  // ── SignalR: nhận realtime update từ bếp ──────────
+  const handleOrderStatusUpdated = useCallback((order: OrderDto) => {
+    const cfg = STATUS_CONFIG[order.status]
+    if (cfg) {
+      toast(`${order.dishName ?? 'Món ăn'} — ${cfg.label}`, {
+        description: `x${order.quantity} · ${formatCurrency(order.dishPrice * order.quantity)}`,
+        duration: 5000,
+      })
+    }
+    // Invalidate để list tự refresh ngay
+    queryClient.invalidateQueries({ queryKey: guestKeys.myOrders(tableId) })
+  }, [queryClient, tableId])
+
+
+
+  useOrderSignalR(
+    accessToken
+      ? {
+        role: 'guest',
+        tableId: Number(tableId),
+        token: accessToken,
+        onOrderStatusUpdated: handleOrderStatusUpdated,
+      }
+      : {
+        role: 'guest',
+        tableId: Number(tableId),
+        token: null,
+      }
+  )
 
   const orders = data?.payload.data ?? []
   const activeOrders = orders.filter(o => o.status !== 'Cancelled' && o.status !== 'Served')

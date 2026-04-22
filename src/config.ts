@@ -6,7 +6,8 @@ const configSchema = z.object({
     NEXT_PUBLIC_API_IDENTITY: z.string(),
     NEXT_PUBLIC_API_MENU: z.string(),
     NEXT_PUBLIC_API_ORDER: z.string(),
-    NEXT_PUBLIC_API_RESERVATION: z.string()
+    NEXT_PUBLIC_API_RESERVATION: z.string(),
+    NEXT_PUBLIC_SIGNALR_ORDER: z.string()
 });
 
 const configProject = configSchema.safeParse({
@@ -14,7 +15,8 @@ const configProject = configSchema.safeParse({
     NEXT_PUBLIC_API_IDENTITY: process.env.NEXT_PUBLIC_API_IDENTITY,
     NEXT_PUBLIC_API_MENU: process.env.NEXT_PUBLIC_API_MENU,
     NEXT_PUBLIC_API_ORDER: process.env.NEXT_PUBLIC_API_ORDER,
-    NEXT_PUBLIC_API_RESERVATION: process.env.NEXT_PUBLIC_API_RESERVATION
+    NEXT_PUBLIC_API_RESERVATION: process.env.NEXT_PUBLIC_API_RESERVATION,
+    NEXT_PUBLIC_SIGNALR_ORDER: process.env.NEXT_PUBLIC_SIGNALR_ORDER
 });
 
 if (!configProject.success) {

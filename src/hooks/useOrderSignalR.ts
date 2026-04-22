@@ -49,7 +49,10 @@ export function useOrderSignalR(options: Options) {
     useEffect(() => {
         if (!options.token) return
 
-        const hubUrl = `${envConfig.NEXT_PUBLIC_API_ORDER}/hubs/order`
+        const hubUrl = `${envConfig.NEXT_PUBLIC_SIGNALR_ORDER}/hubs/order`
+
+
+        console.log('hubUrl___________________________________________', hubUrl)
 
         const connection = new signalR.HubConnectionBuilder()
             .withUrl(hubUrl, {

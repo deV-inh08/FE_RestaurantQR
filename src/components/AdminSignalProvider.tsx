@@ -31,13 +31,14 @@ export function AdminSignalRProvider() {
 
     const isStaff = role === 'Staff' || role === 'Admin' || role === 'SuperAdmin'
 
+
     // ── Handler: Order mới được tạo ─────────────────────────────────────────
     const handleOrderCreated = (order: OrderDto) => {
         // 1. Thêm vào notification store (badge sidebar)
         addOrderCreated(order)
 
         // 2. Toast thông báo
-        toast(`🍽️ Order mới — Bàn ${order.tableNumber}`, {
+        toast(`Order mới — Bàn ${order.tableNumber}`, {
             description: `${order.dishName} x${order.quantity} — ${formatCurrency(order.dishPrice * order.quantity)}`,
             duration: 6000,
             action: {

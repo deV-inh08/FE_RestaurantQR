@@ -203,9 +203,7 @@ export default function OrdersPage() {
                         <TableCell className="text-foreground">Table {order.tableNumber}</TableCell>
                         <TableCell className="text-muted-foreground">{order.guestName}</TableCell>
                         <TableCell className="text-foreground">
-                          <button onClick={() => setOrderToView(order)} className="text-primary underline-offset-2 hover:underline">
-                            {guestItemCount[guestKey] ?? 1} item{(guestItemCount[guestKey] ?? 1) > 1 ? 's' : ''}
-                          </button>
+                          {order.dishName ?? `Snapshot #${order.dishSnapshotId}`}
                         </TableCell>
                         <TableCell className="font-bold text-primary">{getTotal(order)}</TableCell>
                         <TableCell><StatusBadge status={order.status} /></TableCell>

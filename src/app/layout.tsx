@@ -40,7 +40,6 @@ export default function RootLayout({
     <html lang="en" className="bg-background">
       <body className="font-sans antialiased bg-background text-foreground">
         <AppProvider>
-          <AdminSignalRProvider />
           {children}
         </AppProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
