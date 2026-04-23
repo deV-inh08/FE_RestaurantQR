@@ -14,12 +14,13 @@ import {
 } from "lucide-react"
 import { cn, removeTokensFromLS } from "@/src/lib/utils"
 import authApiRequest from "@/src/apiRequests/auth.request"
+import { BillBadge } from "../bill/PayBillModal"
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/dishes", label: "Dishes", icon: UtensilsCrossed },
   { href: "/admin/accounts", label: "Accounts", icon: Users },
-  { href: "/admin/orders", label: "Orders", icon: ClipboardList },
+  { href: "/admin/orders", label: "Orders", icon: ClipboardList, showBillBadge: true },
   { href: "/admin/tables", label: "Tables", icon: QrCode },
   { href: "/admin/reservations", label: "Reservations", icon: CalendarDays },
   { href: "/admin/settings", label: "Settings", icon: Settings },
@@ -72,6 +73,8 @@ export function AdminSidebar() {
               >
                 <item.icon className="h-5 w-5" />
                 <span>{item.label}</span>
+                {/* BillBadge only on Orders nav item */}
+                {item.showBillBadge && <BillBadge />}
               </Link>
             )
           })}

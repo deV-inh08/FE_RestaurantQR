@@ -14,6 +14,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { guestKeys } from '@/src/queries/useGuest'
 import { OrderDto } from '@/src/schema/order.schema'
 import { useOrderSignalR } from '@/src/hooks/useOrderSignalR'
+import BillRequestSection from '@/src/components/bill/BillRequestSection'
 
 // ─── Status config ──────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
@@ -25,7 +26,7 @@ const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
 
 
 
-function StatusPill({ status }: { status: string }) {
+export function StatusPill({ status }: { status: string }) {
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.Pending
   return (
     <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider', cfg.cls)}>
@@ -211,6 +212,10 @@ export default function GuestOrdersPage() {
             </div>
           </div>
         </div>
+      )}
+      {/* ── Bill request section (Component 2) ── */}
+      {!isLoading && orders.length > 0 && (
+        <BillRequestSection orders={orders} accessToken={accessToken} />
       )}
     </div>
   )
