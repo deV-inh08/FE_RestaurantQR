@@ -66,7 +66,7 @@ const dishApiRequest = {
         id: number,
         body: { status: (typeof DishStatus)[keyof typeof DishStatus] }
     ) =>
-        http.put<DishResType>(`/menu/dishes/${id}/status`, body, { service: 'menu' }),
+        http.patch<DishResType>(`/menu/dishes/${id}/status`, body, { service: 'menu' }),
 
     // ─── DELETE dish ──────────────────────────────────────────────────────────
     deleteDish: (id: number) =>

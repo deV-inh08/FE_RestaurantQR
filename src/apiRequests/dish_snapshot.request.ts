@@ -6,6 +6,8 @@ const dishSnapshotApiRequest = {
         `/dish-snapshot/by-dish/${dishId}`,
         { service: 'menu' }
     )
+
+
 }
 
 export default dishSnapshotApiRequest

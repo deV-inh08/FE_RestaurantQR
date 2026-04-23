@@ -10,9 +10,7 @@ const orderApiRequest = {
     updateStatus: (id: number, body: UpdateOrderStatusBodyType) =>
         http.patch<OrderResType>(`/order/${id}/status`, body, { service: 'order' }),
 
-    // ← NEW: toggle isVisibleOnReservation
-    updateVisibility: (id: number, isVisibleOnReservation: boolean) =>
-        http.patch<TableResType>(`/table/${id}/visibility`, { isVisibleOnReservation }, { service: 'order' }),
+
     create: (body: CreateOrderBodyType) =>
         http.post<OrderResType>('/order', body, { service: 'order' })
 }

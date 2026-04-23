@@ -7,7 +7,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Loader2, RefreshCw } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn, formatCurrency } from '@/src/lib/utils'
-import { getGuestAccessToken, isGuestLoggedIn } from '@/src/lib/guest-session'
+import { getGuestAccessToken, getGuestInfo, isGuestLoggedIn } from '@/src/lib/guest-session'
 import { useGetMyOrders } from '@/src/queries/useGuest'
 import envConfig from '@/src/config'
 import { useQueryClient } from '@tanstack/react-query'
@@ -45,6 +45,8 @@ export default function GuestOrdersPage() {
   const router = useRouter()
   const tableId = params.tableId as string
   const accessToken = getGuestAccessToken()
+  const tableNumber = getGuestInfo()?.tableNumber ?? Number(tableId)
+
 
 
   const queryClient = useQueryClient()
@@ -87,14 +89,14 @@ export default function GuestOrdersPage() {
     accessToken
       ? {
         role: 'guest',
-        tableId: Number(tableId),
+        tableId: Number(tableNumber),
         token: accessToken,
         onOrderStatusUpdated: handleOrderStatusUpdated,
         onBillPaid: () => setBillPaid(true),
       }
       : {
         role: 'guest',
-        tableId: Number(tableId),
+        tableId: Number(tableNumber),
         token: null,
       }
   )
