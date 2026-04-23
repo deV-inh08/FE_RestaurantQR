@@ -30,6 +30,7 @@ import { EditOrderModal } from "./components/editOrder"
 import { OrderDto } from "@/src/schema/order.schema"
 import TableStatusGrid from "./components/TableStatusGrid"
 import { OrderRowSkeleton } from "@/src/components/Skeleton/skeleton"
+import BillAdminRequestSection from "@/src/components/bill/BillAdminRequestSection"
 
 
 
@@ -125,6 +126,7 @@ export default function OrdersPage() {
 
 
       <div className="p-6">
+        <BillAdminRequestSection />
         <TableStatusGrid onSelectTable={handleTableClick} />
 
         <div>

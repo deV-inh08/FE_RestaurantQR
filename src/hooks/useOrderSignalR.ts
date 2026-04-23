@@ -15,6 +15,7 @@ import { useEffect, useRef } from 'react'
 import * as signalR from '@microsoft/signalr'
 import envConfig from '@/src/config'
 import type { OrderDto } from '@/src/schema/order.schema'
+import type { BillDto } from '@/src/schema/bill.schema'
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -23,6 +24,8 @@ type StaffOptions = {
     token: string | null
     onOrderCreated?: (order: OrderDto) => void
     onOrderStatusUpdated?: (order: OrderDto) => void
+    onBillRequested?: (bill: BillDto) => void   // ← thêm
+    onBillPaid?: (bill: BillDto) => void        // ← thêm
 }
 
 type GuestOptions = {
@@ -30,7 +33,9 @@ type GuestOptions = {
     tableId: number
     token: string | null
     onOrderCreated?: (order: OrderDto) => void
-    onOrderStatusUpdated?: (order: OrderDto) => void
+    onOrderStatusUpdated?: (order: OrderDto) => void,
+    onBillRequested?: (bill: BillDto) => void   // ← thêm
+    onBillPaid?: (bill: BillDto) => void        // ← thêm
 }
 
 type Options = StaffOptions | GuestOptions
@@ -46,6 +51,15 @@ export function useOrderSignalR(options: Options) {
     onOrderCreatedRef.current = options.onOrderCreated
     onOrderStatusUpdatedRef.current = options.onOrderStatusUpdated
 
+    // Bill
+    const onBillRequestedRef = useRef((options as StaffOptions).onBillRequested)
+    const onBillPaidRef = useRef((options as StaffOptions).onBillPaid)
+    onBillRequestedRef.current = (options as StaffOptions).onBillRequested
+    onBillPaidRef.current = (options as any).onBillPaid
+
+    useEffect(() => {
+        onBillPaidRef.current = options.onBillPaid  // ← update mỗi render
+    }, [options.onBillPaid])
     useEffect(() => {
         if (!options.token) return
 
@@ -75,6 +89,15 @@ export function useOrderSignalR(options: Options) {
 
         connection.on('OrderStatusUpdated', (order: OrderDto) => {
             onOrderStatusUpdatedRef.current?.(order)
+        })
+
+        connection.on('BillRequested', (bill: BillDto) => {
+            onBillRequestedRef.current?.(bill)
+        })
+        connection.on('BillPaid', (bill) => {
+            console.log('[SignalR] BillPaid received on guest side:', bill)
+            console.log('[SignalR] onBillPaidRef.current:', onBillPaidRef.current)
+            onBillPaidRef.current?.(bill)
         })
 
         // ── Xử lý reconnect ───────────────────────────────────────────────

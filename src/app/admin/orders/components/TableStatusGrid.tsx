@@ -1,6 +1,8 @@
-import { cn } from "@/src/lib/utils"
+import { useOrderSignalR } from "@/src/hooks/useOrderSignalR"
+import { cn, getAccessTokenFromLocalStorage } from "@/src/lib/utils"
 import { useGetOrders } from "@/src/queries/useOrder"
 import { useGetTables } from "@/src/queries/useTable"
+import { useQueryClient } from "@tanstack/react-query"
 import { useMemo } from "react"
 
 export default function TableStatusGrid({
@@ -13,6 +15,18 @@ export default function TableStatusGrid({
 
     const tables = tablesData?.payload.data.data ?? []
     const orders = ordersData?.payload.data.data ?? []
+    const queryClient = useQueryClient()
+    const token = getAccessTokenFromLocalStorage()
+
+    useOrderSignalR(
+        token ? {
+            role: 'staff',
+            token,
+            onOrderCreated: () => {
+                queryClient.invalidateQueries({ queryKey: ['orders'] })
+            },
+        } : { role: 'staff', token: null }
+    )
 
     // Count active (non-cancelled, non-served) orders per table
     const activeCountByTable = useMemo(() => {
@@ -63,8 +77,8 @@ export default function TableStatusGrid({
                             )}
                         >
                             {/* Active order badge */}
-                            {count ? (
-                                <span className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-black">
+                            {count && table.status === 'Occupied' ? (
+                                <span className="absolute -right-1.5 -top-1.5 ...">
                                     {count}
                                 </span>
                             ) : null}

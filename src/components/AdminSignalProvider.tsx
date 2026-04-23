@@ -23,6 +23,7 @@ import { getAccessTokenFromLocalStorage, formatCurrency } from '@/src/lib/utils'
 import type { OrderDto } from '@/src/schema/order.schema'
 import { BillDto } from '../schema/bill.schema'
 import { billKeys } from '../queries/useBill'
+import { showBillRequestToast } from './bill/BillRequestToast'
 
 export function AdminSignalRProvider() {
     const role = useAppProviderStore((state) => state.role)
@@ -57,41 +58,7 @@ export function AdminSignalRProvider() {
     }
 
 
-    // ── Bill request handler ─────────────────────────────────────────────────
-    const handleBillRequested = (bill: BillDto) => {
-        // Invalidate bill cache so sidebar badge updates
-        queryClient.invalidateQueries({ queryKey: billKeys.all })
 
-        // Format VND
-        const vnd = new Intl.NumberFormat('vi-VN').format(bill.totalAmount) + ' VND'
-
-        toast(
-            `Yêu cầu thanh toán — Bàn ${bill.tableNumber}`,
-            {
-                description: `${bill.guestName} · ${bill.orders.length} món · ${vnd}`,
-                duration: 8000,
-                icon: (
-                    <div style={{
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        width: 32, height: 32, borderRadius: 8,
-                        backgroundColor: 'rgba(255,192,0,0.12)', color: '#FFC000',
-                    }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                            <polyline points="14 2 14 8 20 8" />
-                            <line x1="16" y1="13" x2="8" y2="13" />
-                            <line x1="16" y1="17" x2="8" y2="17" />
-                        </svg>
-                    </div>
-                ),
-                action: {
-                    label: 'XEM',
-                    onClick: () => { window.location.href = '/admin/orders' },
-                },
-                style: { borderLeft: '3px solid #FFC000' },
-            }
-        )
-    }
 
     // ── Handler: Status order thay đổi ──────────────────────────────────────
     const handleOrderStatusUpdated = (order: OrderDto) => {
@@ -108,6 +75,13 @@ export function AdminSignalRProvider() {
                 token,
                 onOrderCreated: handleOrderCreated,
                 onOrderStatusUpdated: handleOrderStatusUpdated,
+                onBillRequested: (bill) => {
+                    queryClient.invalidateQueries({ queryKey: billKeys.all })
+                    showBillRequestToast(bill, () => { window.location.href = '/admin/orders' })
+                },
+                onBillPaid: (bill) => {
+                    queryClient.invalidateQueries({ queryKey: billKeys.all })
+                },
             }
             : {
                 role: 'staff',

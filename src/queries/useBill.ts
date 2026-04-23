@@ -36,6 +36,10 @@ export const useConfirmBillMutation = () => {
     return useMutation({
         mutationFn: ({ id, ...body }: ConfirmBillBodyType & { id: number }) =>
             billApiRequest.confirm(id, body),
-        onSuccess: () => qc.invalidateQueries({ queryKey: billKeys.all }),
+        onSuccess: () => {
+            qc.invalidateQueries({ queryKey: billKeys.all })   // bill badge biến mất
+            qc.invalidateQueries({ queryKey: ['orders'] })     // badge số món trên bàn biến mất
+            qc.invalidateQueries({ queryKey: ['tables'] })
+        },
     })
 }

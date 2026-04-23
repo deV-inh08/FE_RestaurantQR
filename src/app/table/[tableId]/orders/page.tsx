@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useParams, useRouter } from 'next/navigation'
@@ -14,7 +14,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { guestKeys } from '@/src/queries/useGuest'
 import { OrderDto } from '@/src/schema/order.schema'
 import { useOrderSignalR } from '@/src/hooks/useOrderSignalR'
-import BillRequestSection from '@/src/components/bill/BillRequestSection'
+import BillGuestRequestSection from '@/src/components/bill/BillGuestRequestSection'
 
 // ─── Status config ──────────────────────────────────
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
@@ -40,17 +40,22 @@ function formatTime(iso: string) {
 }
 
 export default function GuestOrdersPage() {
+  const [billPaid, setBillPaid] = useState(false)
   const params = useParams()
   const router = useRouter()
   const tableId = params.tableId as string
+  const accessToken = getGuestAccessToken()
+
 
   const queryClient = useQueryClient()
+
+
+
   // Guard
   useEffect(() => {
     if (!isGuestLoggedIn()) router.replace(`/table/${tableId}/welcome`)
   }, [tableId, router])
 
-  const accessToken = getGuestAccessToken()
 
   // Dùng hook từ useGuest.ts — đúng pattern TanStack Query
   const { data, isLoading, error, refetch, isFetching } = useGetMyOrders(tableId, accessToken)
@@ -85,6 +90,7 @@ export default function GuestOrdersPage() {
         tableId: Number(tableId),
         token: accessToken,
         onOrderStatusUpdated: handleOrderStatusUpdated,
+        onBillPaid: () => setBillPaid(true),
       }
       : {
         role: 'guest',
@@ -94,10 +100,7 @@ export default function GuestOrdersPage() {
   )
 
   const orders = data?.payload.data ?? []
-  const activeOrders = orders.filter(o => o.status !== 'Cancelled' && o.status !== 'Served')
-  const total = orders.reduce((sum, o) =>
-    o.status !== 'Cancelled' ? sum + o.dishPrice * o.quantity : sum, 0
-  )
+
 
   return (
     <div className="flex min-h-screen flex-col pb-32">
@@ -146,7 +149,7 @@ export default function GuestOrdersPage() {
 
       {/* Order list */}
       {!isLoading && orders.length > 0 && (
-        <div className="flex flex-col gap-3 px-4 pt-4">
+        <div className="flex  flex-col  gap-3 px-4 pt-4">
           {orders.map(order => {
             const imgSrc = order.dishImage
               ? order.dishImage.startsWith('http')
@@ -192,31 +195,17 @@ export default function GuestOrdersPage() {
               </div>
             )
           })}
+
         </div>
       )}
 
-      {/* Total bar */}
-      {orders.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-gold-border bg-background/95 backdrop-blur">
-          <div className="mx-auto max-w-[440px] p-4">
-            <div className="flex items-center justify-between rounded-md border border-border-subtle bg-card p-4 shadow-card">
-              <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wider">
-                  {activeOrders.length > 0
-                    ? `${activeOrders.length} món đang xử lý`
-                    : 'Tất cả đã phục vụ'}
-                </p>
-                <p className="text-xs text-muted-foreground">Tổng cộng</p>
-              </div>
-              <span className="text-2xl font-bold text-primary">{formatCurrency(total)}</span>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* ── Bill request section (Component 2) ── */}
+
+
       {!isLoading && orders.length > 0 && (
-        <BillRequestSection orders={orders} accessToken={accessToken} />
+        <BillGuestRequestSection orders={orders} accessToken={accessToken} billPaid={billPaid} />
       )}
+
+
     </div>
   )
 }

@@ -14,7 +14,7 @@ import {
 } from "lucide-react"
 import { cn, removeTokensFromLS } from "@/src/lib/utils"
 import authApiRequest from "@/src/apiRequests/auth.request"
-import { BillBadge } from "../bill/PayBillModal"
+import { BillBadge } from "../bill/Billbadge"
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
