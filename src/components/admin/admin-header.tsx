@@ -4,6 +4,9 @@ import { Bell, Search } from "lucide-react"
 import { Button } from "@/src/components/ui/button"
 import { NotificationBell } from "./NotificationBellAdmin"
 import { useGetMe } from "@/src/queries/useAccount"
+import { useEffect, useRef, useState } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { useDebounce } from "@/src/hooks/useDebounce"
 
 interface AdminHeaderProps {
   title: string
@@ -21,6 +24,35 @@ function getInitials(name: string) {
 }
 
 export function AdminHeader({ title, subtitle }: AdminHeaderProps) {
+  const searchParams = useSearchParams()
+  const [searchValue, setSearchValue] = useState(searchParams.get('q') ?? '')
+  const debouncedSearch = useDebounce(searchValue, 400)
+  const isFirstRender = useRef(true)
+  const router = useRouter()
+  const pathname = usePathname()
+
+  useEffect(() => {
+    // Bỏ qua lần đầu render để không push URL khi chưa type gì
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
+    }
+    const params = new URLSearchParams(searchParams.toString())
+    if (debouncedSearch) {
+      params.set('q', debouncedSearch)
+    } else {
+      params.delete('q')
+    }
+    router.push(`${pathname}?${params.toString()}`)
+  }, [debouncedSearch])
+
+
+  // Reset khi navigate sang trang khác
+  useEffect(() => {
+    setSearchValue(searchParams.get('q') ?? '')
+  }, [pathname])
+
+
   const { data: meData } = useGetMe()
   const me = meData?.payload.data
   return (
@@ -36,14 +68,16 @@ export function AdminHeader({ title, subtitle }: AdminHeaderProps) {
 
       <div className="flex items-center gap-4">
         {/* Search */}
-        <div className="relative">
+        {/* <div className="relative">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Tìm kiếm..."
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
             className="h-10 w-64 rounded-md border border-input-border bg-input pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground transition-all focus:border-primary focus:ring-2 focus:ring-gold-primary/20 focus:outline-none"
           />
-        </div>
+        </div> */}
 
         {/* Notifications */}
         <NotificationBell />

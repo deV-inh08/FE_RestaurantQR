@@ -8,6 +8,7 @@ import DeleteReservationDialog from './components/delete_reservation'
 import TableReservation from "./components/table_reservation"
 import { ReservationDto, ReservationStatusType } from '@/src/schema/reservation.schema'
 import { useGetReservations } from '@/src/queries/useReservation'
+import { TableSkeleton } from '@/src/components/Skeleton/skeleton'
 
 // Mock Data
 // const tablesData = [
@@ -159,13 +160,7 @@ export default function ReservationPage() {
           border: '1px solid rgba(255,255,255,0.06)',
         }}>
           {isLoading ? (
-            <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              padding: '60px 20px', color: '#8A7F72', gap: 12,
-            }}>
-              <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} />
-              Đang tải...
-            </div>
+            <TableSkeleton rows={8} cols={6} />
           ) : filtered.length === 0 ? (
             <div style={{
               display: 'flex', flexDirection: 'column',
