@@ -10,30 +10,6 @@ import { ReservationDto, ReservationStatusType } from '@/src/schema/reservation.
 import { useGetReservations } from '@/src/queries/useReservation'
 import { TableSkeleton } from '@/src/components/Skeleton/skeleton'
 
-// Mock Data
-// const tablesData = [
-//   { id: 1, number: 1, capacity: 2, status: "Available", qrCode: "tbl-001" },
-//   { id: 2, number: 2, capacity: 4, status: "Available", qrCode: "tbl-002" },
-//   { id: 3, number: 3, capacity: 4, status: "Reserved", qrCode: "tbl-003" },
-//   { id: 4, number: 4, capacity: 6, status: "Available", qrCode: "tbl-004" },
-//   { id: 5, number: 5, capacity: 2, status: "Hidden", qrCode: "tbl-005" },
-//   { id: 6, number: 6, capacity: 8, status: "Available", qrCode: "tbl-006" },
-//   { id: 7, number: 7, capacity: 4, status: "Reserved", qrCode: "tbl-007" },
-//   { id: 8, number: 8, capacity: 2, status: "Available", qrCode: "tbl-008" },
-//   { id: 9, number: 9, capacity: 6, status: "Available", qrCode: "tbl-009" },
-//   { id: 10, number: 10, capacity: 4, status: "Hidden", qrCode: "tbl-010" },
-// ]
-
-// interface TableItem {
-//   id: number
-//   number: number
-//   capacity: number
-//   status: string
-//   qrCode: string
-// }
-
-
-
 export default function ReservationPage() {
   const router = useRouter()
   const [search, setSearch] = useState('')

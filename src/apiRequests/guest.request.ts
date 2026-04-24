@@ -45,7 +45,7 @@ const guestApiRequest = {
         ),
 
     /**
-     * GET /order/api/v1/table/{id}/public — AllowAnonymous
+     * GET /order/api/v1/table/{id}number — AllowAnonymous
      * Lấy tableNumber từ tableId (DB id) — dùng ở welcome page trước khi login.
      */
     getTablePublic: (tableId: number) =>

@@ -114,7 +114,7 @@ function TableReservation({
                         backgroundColor: 'rgba(255,192,0,0.1)', color: '#FFC000',
                         fontWeight: 700, padding: '3px 10px', borderRadius: 6, fontSize: 12,
                     }}>
-                        Bàn {res.tableId}
+                        Bàn {res.tableNumber}
                     </span>
                 ) : (
                     <span style={{ fontSize: 12, color: '#8A7F72' }}>Chưa chọn</span>

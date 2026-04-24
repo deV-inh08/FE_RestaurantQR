@@ -39,7 +39,6 @@ export const useGetMyOrders = (tableId: string, guestAccessToken: string | null)
         queryKey: guestKeys.myOrders(tableId),
         queryFn: () => guestApiRequest.getMyOrders(guestAccessToken!),
         enabled: Boolean(guestAccessToken),
-        refetchInterval: 15_000,
     })
 
 /**

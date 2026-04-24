@@ -42,8 +42,8 @@ export const useUpdateTableStatusMutation = () => {
 export const useUpdateTableVisibilityMutation = () => {
     const qc = useQueryClient()
     return useMutation({
-        mutationFn: ({ id, isVisibleOnReservation }: { id: number; isVisibleOnReservation: boolean }) =>
-            tableApiRequest.updateVisibility(id, isVisibleOnReservation),
+        mutationFn: ({ tableNumber, isVisibleOnReservation }: { tableNumber: number; isVisibleOnReservation: boolean }) =>
+            tableApiRequest.updateVisibility(tableNumber, isVisibleOnReservation),
         onSuccess: () => qc.invalidateQueries({ queryKey: tableKeys.allTables })
     })
 }

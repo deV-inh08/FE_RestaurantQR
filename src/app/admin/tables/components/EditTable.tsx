@@ -51,7 +51,7 @@ export const EditTableModal = ({ table, onClose }: { table: TableDto | null; onC
                 updateStatusMutation.mutateAsync({ id: table.id, status: status as any }),
                 // Chỉ gọi visibility nếu đã thay đổi so với giá trị hiện tại
                 isVisible !== table.isVisibleOnReservation
-                    ? updateVisibilityMutation.mutateAsync({ id: table.id, isVisibleOnReservation: isVisible })
+                    ? updateVisibilityMutation.mutateAsync({ tableNumber: table.number, isVisibleOnReservation: isVisible })
                     : Promise.resolve()
             ])
             toast.success('Cập nhật trạng thái thành công')

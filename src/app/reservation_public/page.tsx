@@ -12,28 +12,30 @@ import { handleErrorApi } from '@/src/lib/utils'
 import TableSection from './components/TableSection'
 import ConfirmedState from './components/confirmedState'
 import { ReservationTableDto } from '@/src/schema/reservation.schema'
-
+// import { useUpdateTableVisibilityMutation } from '@/src/queries/useTable'
+import { useCreateReservationMutation } from '@/src/queries/useReservation'
+import { useGetTablesForReservation } from '@/src/queries/useTable'
 
 
 // ─── Hooks ───────────────────────────────────────────────────────────────────
-function useTablesForReservation() {
-  return useQuery({
-    queryKey: ['tables-reservation'],
-    queryFn: () =>
-      http.get<{ message: string; data: ReservationTableDto[] }>(
-        '/table/reservation-available',
-        { service: 'order' }
-      ),
-    staleTime: 60_000,
-  })
-}
+// function useTablesForReservation() {
+//   return useQuery({
+//     queryKey: ['tables-reservation'],
+//     queryFn: () =>
+//       http.get<{ message: string; data: ReservationTableDto[] }>(
+//         '/table/reservation-available',
+//         { service: 'order' }
+//       ),
+//     staleTime: 60_000,
+//   })
+// }
 
-function useCreateReservation() {
-  return useMutation({
-    mutationFn: (body: Record<string, unknown>) =>
-      http.post('/reservation', body, { service: 'reservation' }),
-  })
-}
+// function useCreateReservation() {
+//   return useMutation({
+//     mutationFn: (body: Record<string, unknown>) =>
+//       http.post('/reservation', body, { service: 'reservation' }),
+//   })
+// }
 
 // ─── Small helpers ────────────────────────────────────────────────────────────
 const inputStyle: React.CSSProperties = {
@@ -71,80 +73,11 @@ function FieldLabel({ icon: Icon, children }: { icon: React.ElementType; childre
   )
 }
 
-// ─── Table button ─────────────────────────────────────────────────────────────
-function TableButton({
-  table,
-  selected,
-  onClick,
-}: {
-  table: ReservationTableDto
-  selected: boolean
-  onClick: () => void
-}) {
-  const isUnavailable = table.status !== 'Available'
-  const [hovered, setHovered] = useState(false)
-
-  const bg = selected
-    ? '#FFC000'
-    : isUnavailable
-      ? 'rgba(239,68,68,0.08)'
-      : hovered
-        ? 'rgba(255,192,0,0.06)'
-        : '#1A1714'
-
-  const border = selected
-    ? 'none'
-    : isUnavailable
-      ? '1px solid rgba(239,68,68,0.25)'
-      : hovered
-        ? '1px solid rgba(255,192,0,0.4)'
-        : '1px solid rgba(255,255,255,0.1)'
-
-  const textColor = selected ? '#000' : isUnavailable ? '#ef4444' : '#F5F0E8'
-  const subColor = selected ? 'rgba(0,0,0,0.55)' : isUnavailable ? 'rgba(239,68,68,0.6)' : '#8A7F72'
-
-  return (
-    <button
-      onClick={isUnavailable ? undefined : onClick}
-      disabled={isUnavailable}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      title={isUnavailable ? `Bàn ${table.number} — ${table.status}` : `Bàn ${table.number} — ${table.capacity} chỗ`}
-      style={{
-        width: 64, height: 64,
-        backgroundColor: bg,
-        border,
-        borderRadius: 10,
-        cursor: isUnavailable ? 'not-allowed' : 'pointer',
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: 2,
-        transition: 'all 0.15s',
-        color: textColor,
-        opacity: isUnavailable && !selected ? 0.55 : 1,
-        position: 'relative',
-      }}
-    >
-      <span style={{ fontSize: 16, fontWeight: 700 }}>{table.number}</span>
-      <span style={{ fontSize: 9, letterSpacing: '0.05em', color: subColor }}>
-        {table.capacity} PAX
-      </span>
-      {isUnavailable && (
-        <span style={{
-          position: 'absolute', bottom: -6,
-          fontSize: 9, color: '#ef4444', fontWeight: 600,
-          backgroundColor: '#0D0B08', padding: '0 4px', borderRadius: 3,
-        }}>
-          {table.status === 'Occupied' ? 'CÓ KHÁCH' : 'ẨN'}
-        </span>
-      )}
-    </button>
-  )
-}
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 export default function ReservationPage() {
   // Table data from Order.API
-  const { data: tableRes, isLoading: tableLoading } = useTablesForReservation()
+  const { data: tableRes, isLoading: tableLoading } = useGetTablesForReservation()
   const tables = tableRes?.payload?.data ?? []
 
   // Group tables
@@ -165,13 +98,13 @@ export default function ReservationPage() {
 
   const isFormValid = name.trim() && phone.trim() && date && time && Number(guests) > 0
 
-  const createMutation = useCreateReservation()
+  const createMutation = useCreateReservationMutation()
 
   const handleConfirm = async () => {
     if (!isFormValid) return
 
     // Combine date + time → ISO DateTime string
-    const reservationDate = new Date(`${date}T${time}:00`).toISOString()
+    const reservationDate = new Date(`${date}T${time}:00`)
 
     try {
       await createMutation.mutateAsync({
@@ -180,6 +113,7 @@ export default function ReservationPage() {
         guestEmail: email.trim() || null,
         tableId: selectedTable?.id ?? null,
         numberOfPeople: Number(guests),
+        tableNumber: selectedTable?.number ?? null,
         reservationDate,
         depositAmount: 0,
         depositStatus: 'None',
