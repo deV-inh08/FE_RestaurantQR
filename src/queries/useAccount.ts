@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import accountApiRequest from '../apiRequests/account.request'
 import {
     ChangePasswordBodyType,
@@ -15,11 +15,14 @@ export const accountKeys = {
     me: ['account', 'me'] as const
 }
 
+import { PAGE_SIZE } from '../config'
+
 // ─── Queries ───────────────────────────────────────
-export const useGetAccounts = ({ page = 1, pageSize = 20 }: { page?: number; pageSize?: number }) =>
+export const useGetAccounts = ({ page = 1, pageSize = PAGE_SIZE }: { page?: number; pageSize?: number }) =>
     useQuery({
         queryKey: accountKeys.all(page, pageSize),
-        queryFn: () => accountApiRequest.getAll(page, pageSize)
+        queryFn: () => accountApiRequest.getAll(page, pageSize),
+        placeholderData: keepPreviousData
     })
 
 export const useGetAccount = ({

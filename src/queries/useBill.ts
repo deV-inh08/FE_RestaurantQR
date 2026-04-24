@@ -12,7 +12,6 @@ export const useGetBills = (page = 1, pageSize = 20) =>
     useQuery({
         queryKey: billKeys.list(page, pageSize),
         queryFn: () => billApiRequest.getAll(page, pageSize),
-        refetchInterval: 10_000,
     })
 
 export const useGetTableBill = (tableId: number, enabled = true) =>
@@ -20,7 +19,6 @@ export const useGetTableBill = (tableId: number, enabled = true) =>
         queryKey: billKeys.table(tableId),
         queryFn: () => billApiRequest.getByTable(tableId),
         enabled: enabled && tableId > 0,
-        refetchInterval: 10_000,
     })
 
 export const useRequestBillMutation = () => {

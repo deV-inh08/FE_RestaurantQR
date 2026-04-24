@@ -8,6 +8,13 @@ export const useLoginMutation = () => {
         mutationFn: authApiRequest.login
     })
 }
+
+export const useRefreshAccessTokenMutation = () => {
+    return useMutation({
+        mutationFn: authApiRequest.refreshToken
+    })
+}
+
 export const useLogoutMutation = () => {
     return useMutation({
         mutationFn: authApiRequest.logout

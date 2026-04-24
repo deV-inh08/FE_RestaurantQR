@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import tableApiRequest from '../apiRequests/table.request'
 import { CreateTableBodyType, UpdateTableStatusBodyType } from '@/src/schema/table.schema'
 
@@ -11,7 +11,8 @@ export const tableKeys = {
 export const useGetTables = ({ page, pageSize }: { page: number, pageSize: number }) =>
     useQuery({
         queryKey: tableKeys.all(page, pageSize),
-        queryFn: () => tableApiRequest.getAll(page, pageSize)
+        queryFn: () => tableApiRequest.getAll(page, pageSize),
+        placeholderData: keepPreviousData
     })
 
 export const useGetTable = ({ id, enabled }: { id: number; enabled: boolean }) =>

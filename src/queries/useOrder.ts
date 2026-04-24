@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import orderApiRequest from '@/src/apiRequests/order.request'
 import { CreateOrderBodyType, UpdateOrderStatusBodyType } from '@/src/schema/order.schema'
 // ─── Order keys ────────────────────────────────────
@@ -11,8 +11,7 @@ export const useGetOrders = ({ page, pageSize }: { page: number, pageSize: numbe
     useQuery({
         queryKey: orderKeys.all(page, pageSize),
         queryFn: () => orderApiRequest.getAll(page, pageSize),
-        // Poll every 15s so the order list stays fresh without WebSocket
-        // refetchInterval: 15_000
+        placeholderData: keepPreviousData
     })
 
 export const useUpdateOrderStatusMutation = () => {

@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useGetDishes } from "../queries/useDish"
+import { handleImageURL } from "@/src/lib/utils"
 
 
 export default function HomePage() {
@@ -327,7 +328,7 @@ export default function HomePage() {
               <div
                 style={{
                   height: "150px",
-                  backgroundImage: `url(http://localhost:3002/${dish.imagePath})`,
+                  backgroundImage: `url(${handleImageURL(dish.imagePath ?? '')})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                 }}

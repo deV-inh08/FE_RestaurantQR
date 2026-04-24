@@ -4,6 +4,7 @@ import {
     removeTokensFromLS, setAccessTokenToLocalStorage, setRefreshTokenToLocalStorage
 } from '../lib/utils'
 import guestApiRequest from '../apiRequests/guest.request'
+import authApiRequest from '../apiRequests/auth.request'
 import { toast } from 'sonner'
 
 function extractTableIdFromPath(): string {
@@ -20,6 +21,7 @@ export async function handleUnauthorized(tokenFromHeader: string | null): Promis
 
     const isGuestRoute = window.location.pathname.startsWith('/table/')
 
+    // Guest
     if (isGuestRoute) {
         // ── Guest path: thử refresh, nếu thất bại → về welcome page ──
         const refreshToken = getGuestRefreshToken()
@@ -48,23 +50,31 @@ export async function handleUnauthorized(tokenFromHeader: string | null): Promis
         return
     }
 
-    // ── Admin path: logout + redirect về login ──
-    if (!clientLogoutRequest) {
-        clientLogoutRequest = fetch('/api/auth/logout', { method: 'POST' })
-            .then(() => {
-                removeTokensFromLS()
-                const locale = getClientCookie('NEXT_LOCALE') ?? 'en'
-                location.href = `/login`
-            })
-            .finally(() => {
-                clientLogoutRequest = null
-            })
+    // ── Admin path: thử refresh token trước khi logout ──
+    try {
+        const res = await authApiRequest.refreshToken()
+        const { accessToken, refreshToken } = res.payload.data
+        saveTokens(accessToken, refreshToken)
+        window.location.reload()
+        return
+    } catch {
+        if (!clientLogoutRequest) {
+            clientLogoutRequest = fetch('/api/auth/logout', { method: 'POST' })
+                .then(() => {
+                    removeTokensFromLS()
+                    location.href = `/login`
+                })
+                .finally(() => {
+                    clientLogoutRequest = null
+                })
+        }
+        await clientLogoutRequest
     }
-
-    await clientLogoutRequest
 }
 
 export function saveTokens(accessToken: string, refreshToken: string): void {
     setAccessTokenToLocalStorage(accessToken)
     setRefreshTokenToLocalStorage(refreshToken)
 }
+
+// kcnlDKGcaWL0ZGFFUEYlF7Tozi_eZ7JJvYNThoEH1N0

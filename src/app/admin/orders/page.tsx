@@ -1,6 +1,7 @@
 "use client"
 
-import { useMemo, useState, useCallback } from "react"
+import { useMemo, useState, useCallback, Suspense } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { AdminHeader } from "@/src/components/admin/admin-header"
 import { useQueryClient } from "@tanstack/react-query"
 import { useOrderSignalR } from "@/src/hooks/useOrderSignalR"
@@ -57,11 +58,29 @@ function TableStatusPill({ status }: { status: TableStatus }) {
   )
 }
 
-const PAGE_SIZE = 20
+import { PAGE_SIZE } from "@/src/config"
 
 // ─── Main page ──────────────────────────────────────
 export default function OrdersPage() {
-  const [page, setPage] = useState(1)
+  return (
+    <Suspense fallback={<div className="p-6">Đang tải...</div>}>
+      <OrdersContent />
+    </Suspense>
+  )
+}
+
+function OrdersContent() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const pageParam = searchParams.get('page')
+  const page = pageParam ? Number(pageParam) : 1
+
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('page', newPage.toString())
+    router.push(`${pathname}?${params.toString()}`, { scroll: false })
+  }
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
@@ -96,9 +115,9 @@ export default function OrdersPage() {
     o.dishPrice ? formatCurrency(o.dishPrice * o.quantity) : '—'
 
   // Reset page when filter changes
-  const handleStatusChange = (v: string) => { setStatusFilter(v); setPage(1) }
-  const handleDateFromChange = (v: string) => { setDateFrom(v); setPage(1) }
-  const handleDateToChange = (v: string) => { setDateTo(v); setPage(1) }
+  const handleStatusChange = (v: string) => { setStatusFilter(v); handlePageChange(1) }
+  const handleDateFromChange = (v: string) => { setDateFrom(v); handlePageChange(1) }
+  const handleDateToChange = (v: string) => { setDateTo(v); handlePageChange(1) }
 
   const orders = useMemo(() => {
     return (data?.payload.data.data ?? []).filter(o => {
@@ -236,7 +255,7 @@ export default function OrdersPage() {
             )}
 
             {/* Real pagination */}
-            <PaginationV1 page={pagination.page || 1} totalPages={pagination.totalPages || 20} onPageChange={setPage} />
+            <PaginationV1 page={pagination.page || 1} totalPages={pagination.totalPages || 20} onPageChange={handlePageChange} />
           </div>
         </div>
       </div>

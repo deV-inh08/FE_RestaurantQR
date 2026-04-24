@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { AdminHeader } from "@/src/components/admin/admin-header"
 import { Button } from "@/src/components/ui/button"
 
@@ -43,14 +44,34 @@ function StatusPill({ status }: { status: "Available" | "Occupied" | "Hidden" })
   )
 }
 
-const PAGE_SIZE = 20
+import { PAGE_SIZE } from "@/src/config"
+
 // ─── Main page ──────────────────────────────────────
 export default function TablesPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Đang tải...</div>}>
+      <TablesContent />
+    </Suspense>
+  )
+}
+
+function TablesContent() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const pageParam = searchParams.get('page')
+  const page = pageParam ? Number(pageParam) : 1
+
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('page', newPage.toString())
+    router.push(`${pathname}?${params.toString()}`, { scroll: false })
+  }
+
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [tableToEdit, setTableToEdit] = useState<TableDto | null>(null)
   const [tableToDelete, setTableToDelete] = useState<TableDto | null>(null)
   const [search, setSearch] = useState('')
-  const [page, setPage] = useState(1)
 
   const { data, isLoading } = useGetTables({ page, pageSize: PAGE_SIZE })
   const tables = (data?.payload.data.data ?? []).filter(t =>
@@ -119,7 +140,7 @@ export default function TablesPage() {
               </TableBody>
             </Table>
           )}
-          <PaginationV1 totalPages={pagination.totalPages || 10} page={pagination.page || 1} onPageChange={setPage} />
+          <PaginationV1 totalPages={pagination.totalPages || 10} page={pagination.page || 1} onPageChange={handlePageChange} />
         </div>
       </div>
 

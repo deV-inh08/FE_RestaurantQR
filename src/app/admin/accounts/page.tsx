@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { AdminHeader } from "@/src/components/admin/admin-header"
 import { Button } from "@/src/components/ui/button"
 import { Search, Plus, ShieldCheck } from "lucide-react"
@@ -10,14 +11,32 @@ import TableAccount, { AccountItem } from "./components/table_account"
 import AddStaff from "@/src/components/admin/add-staff"
 import AddAdmin from "@/src/components/admin/add-admin"
 import { TableSkeleton } from "@/src/components/Skeleton/skeleton"
-
-const PAGE_SIZE = 20
+import { PAGE_SIZE } from "@/src/config"
 
 export default function AccountsPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Đang tải...</div>}>
+      <AccountsContent />
+    </Suspense>
+  )
+}
+
+function AccountsContent() {
+  const router = useRouter()
+  const pathname = usePathname()
+  const searchParams = useSearchParams()
+  const pageParam = searchParams.get('page')
+  const page = pageParam ? Number(pageParam) : 1
+
+  const handlePageChange = (newPage: number) => {
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('page', newPage.toString())
+    router.push(`${pathname}?${params.toString()}`, { scroll: false })
+  }
+
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false)
   const [isAddAdminOpen, setIsAddAdminOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [page, setPage] = useState(1)
 
   const { data, isLoading } = useGetAccounts({ page, pageSize: PAGE_SIZE })
   const { data: meData } = useGetMe()
@@ -89,7 +108,7 @@ export default function AccountsPage() {
           <PaginationV1
             page={pagination.page}
             totalPages={pagination.totalPages}
-            onPageChange={setPage}
+            onPageChange={handlePageChange}
           />
         </div>
       </div>

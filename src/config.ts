@@ -31,3 +31,4 @@ export const locales = ['en', 'vi'] as const
 export const defaultLocale: Locale = 'en'
 
 export default envConfig
+export const PAGE_SIZE = 10

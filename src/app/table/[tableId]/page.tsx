@@ -176,7 +176,7 @@ export default function GuestMenuPage() {
               {/* Image */}
               <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md bg-surface">
                 {imgSrc ? (
-                  <Image src={`http://localhost:3002/${dish.imagePath}`} alt={dish.name} fill className="object-cover" />
+                  <Image src={imgSrc} alt={dish.name} fill className="object-cover" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-2xl">🍽️</div>
                 )}

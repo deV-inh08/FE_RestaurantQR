@@ -9,6 +9,7 @@ import TableReservation from "./components/table_reservation"
 import { ReservationDto, ReservationStatusType } from '@/src/schema/reservation.schema'
 import { useGetReservations } from '@/src/queries/useReservation'
 import { TableSkeleton } from '@/src/components/Skeleton/skeleton'
+import { PAGE_SIZE } from '@/src/config'
 
 export default function ReservationPage() {
   const router = useRouter()
@@ -22,7 +23,7 @@ export default function ReservationPage() {
   // Build query params for the API
   const queryParams = useMemo(() => ({
     page,
-    pageSize: 20,
+    pageSize: PAGE_SIZE,
     ...(statusFilter !== 'all' ? { status: statusFilter as ReservationStatusType } : {}),
     ...(dateFilter ? { fromDate: dateFilter, toDate: dateFilter } : {}),
     ...(search.match(/^\d/) ? { guestPhone: search } : {}),

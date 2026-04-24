@@ -18,6 +18,7 @@ import { DishDto, UpdateDishBodyType } from "@/src/schema/dish.schema"
 import { useUpdateDishMutation } from "@/src/queries/useDish"
 import { toast } from "sonner"
 import ImageUpload from "./upload_image"
+import { handleImageURL } from "@/src/lib/utils"
 
 const UpdateDish = (props: {
     isUpdateModalOpen: boolean;
@@ -69,11 +70,7 @@ const UpdateDish = (props: {
     }
 
     // Build preview URL for the existing image
-    const existingImageUrl = dish?.imagePath
-        ? dish.imagePath.startsWith('http')
-            ? dish.imagePath
-            : `http://localhost:3002${dish.imagePath}`
-        : null
+    const existingImageUrl = handleImageURL(dish?.imagePath ?? '')
 
     return (
         <Dialog open={isUpdateModalOpen} onOpenChange={setIsUpdateModalOpen}>

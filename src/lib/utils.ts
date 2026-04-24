@@ -87,10 +87,10 @@ export const handleErrorApi = ({
 
 export const handleImageURL = (path: string) => {
   // imagePath có thể là relative path hoặc full URL
-  const imgSrc = path
-    ? path.startsWith('http')
-      ? path
-      : `${envConfig.NEXT_PUBLIC_API_MENU}${path}`
-    : null
-  return imgSrc
+  if (!path) return null
+  if (path.startsWith('http')) return path
+
+  // Xóa '/api/v1' khỏi baseUrl vì ảnh thường được serve ở thư mục gốc của BE
+  const baseUrl = envConfig.NEXT_PUBLIC_API_MENU.replace('/api/v1', '')
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`
 }

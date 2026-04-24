@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import reservationApiRequest from '../apiRequests/reservation.request'
 import type {
     CreateReservationBodyType,
@@ -19,6 +19,7 @@ export const useGetReservations = (params: ReservationQueryParams = {}) =>
     useQuery({
         queryKey: reservationKeys.list(params),
         queryFn: () => reservationApiRequest.getAll(params),
+        placeholderData: keepPreviousData,
     })
 
 export const useGetReservation = (id: string, enabled = true) =>

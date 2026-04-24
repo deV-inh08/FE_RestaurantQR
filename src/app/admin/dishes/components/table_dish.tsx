@@ -7,7 +7,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/src/components/ui/table"
-import { cn, formatCurrency } from "@/src/lib/utils";
+import { cn, formatCurrency, handleImageURL } from "@/src/lib/utils";
 import { Pencil, Trash2 } from "lucide-react"
 import Image from "next/image";
 import { DishDto, UpdateDishBodyType } from "@/src/schema/dish.schema";
@@ -76,7 +76,7 @@ const TableDish = (props: {
                         <TableCell>
                             <div className="relative h-12 w-12 overflow-hidden rounded-md bg-surface">
                                 <Image
-                                    src={`http://localhost:3002${dish.imagePath}`}
+                                    src={handleImageURL(dish.imagePath ?? '') ?? ''}
                                     alt={dish.name}
                                     fill
                                     className="object-cover"
