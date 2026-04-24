@@ -24,18 +24,18 @@ import { DeleteTableDialog } from "./components/DeleteTableDialog"
 import QRPreview from "./components/QR_Preview"
 import { TableSkeleton } from "@/src/components/Skeleton/skeleton"
 
-function StatusPill({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    available: "bg-green-600 text-white",
-    reserved: "bg-primary text-primary-foreground",
-    hidden: "bg-[#7D7D7D] text-white",
+function StatusPill({ status }: { status: "Available" | "Occupied" | "Hidden" }) {
+  const styles: Record<"Available" | "Occupied" | "Hidden", string> = {
+    Available: "bg-green-600 text-white",
+    Occupied: "bg-primary text-primary-foreground",
+    Hidden: "bg-[#7D7D7D] text-white",
   }
 
   return (
     <span
       className={cn(
         "inline-flex px-3 py-1 text-xs font-bold uppercase tracking-wide",
-        styles[status] || styles.available
+        styles[status] || styles.Available
       )}
     >
       {status}
