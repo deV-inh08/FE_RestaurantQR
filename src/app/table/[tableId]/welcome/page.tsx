@@ -8,11 +8,14 @@ import { useGuestLoginMutation, useGetTablePublic } from '@/src/queries/useGuest
 import { setGuestTokens, setGuestInfo, isGuestLoggedIn } from '../../../../lib/guest-session'
 import { useState } from 'react'
 import { handleErrorApi } from '@/src/lib/utils'
+import { useUpdateTableStatusMutation } from '@/src/queries/useTable'
 
 export default function GuestLoginPage() {
   const params = useParams()
   const router = useRouter()
-  const tableId = Number(params.tableId)
+  const tableId = Number(params.tableId) // tableId === tableNumber
+
+  const updateTableStatusMutation = useUpdateTableStatusMutation()
 
   const [name, setName] = useState('')
 
@@ -51,6 +54,7 @@ export default function GuestLoginPage() {
       // Lưu Guest JWT vào sessionStorage (tách biệt với admin localStorage)
       setGuestTokens(accessToken, refreshToken)
       setGuestInfo(guest.name, guest.tableNumber)
+      updateTableStatusMutation.mutateAsync({ id: tableId, status: 'Occupied' })
       router.push(`/table/${tableId}`)
     } catch (error) {
       handleErrorApi({ error })

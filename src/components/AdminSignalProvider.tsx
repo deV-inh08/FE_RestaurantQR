@@ -21,15 +21,15 @@ import { useOrderNotificationStore } from '@/src/hooks/useOrderNotification'
 import { useAppProviderStore } from '@/src/components/app-provider'
 import { getAccessTokenFromLocalStorage, formatCurrency } from '@/src/lib/utils'
 import type { OrderDto } from '@/src/schema/order.schema'
-import { BillDto } from '../schema/bill.schema'
 import { billKeys } from '../queries/useBill'
+import { tableKeys } from '@/src/queries/useTable'
 import { showBillRequestToast } from './bill/BillRequestToast'
+import { TableDto } from '../schema/table.schema'
 
 export function AdminSignalRProvider() {
     const role = useAppProviderStore((state) => state.role)
     const token = getAccessTokenFromLocalStorage()
     const addOrderCreated = useOrderNotificationStore((s) => s.addOrderCreated)
-    const addOrderStatusUpdated = useOrderNotificationStore((s) => s.addOrderStatusUpdated)
     const queryClient = useQueryClient()
 
     const isStaff = role === 'Staff' || role === 'Admin' || role === 'SuperAdmin'
@@ -57,14 +57,20 @@ export function AdminSignalRProvider() {
         queryClient.invalidateQueries({ queryKey: ['orders'] })
     }
 
-
-
-
     // ── Handler: Status order thay đổi ──────────────────────────────────────
     const handleOrderStatusUpdated = (order: OrderDto) => {
         // Chỉ notify khi có staff khác update (không notify chính mình)
         // → Vẫn invalidate cache để đồng bộ
         queryClient.invalidateQueries({ queryKey: ['orders'] })
+    }
+
+
+    const handleTableStatusChanged = (table: TableDto) => {
+        // Invalidate toàn bộ danh sách bàn để TablesPage tự động tải lại
+        queryClient.invalidateQueries({ queryKey: tableKeys.allTables })
+
+        // Nếu có trang chi tiết bàn, invalidate luôn chi tiết của bàn đó
+        queryClient.invalidateQueries({ queryKey: tableKeys.detail(table.id) })
     }
 
     // ── Kết nối SignalR ─────────────────────────────────────────────────────
@@ -75,6 +81,7 @@ export function AdminSignalRProvider() {
                 token,
                 onOrderCreated: handleOrderCreated,
                 onOrderStatusUpdated: handleOrderStatusUpdated,
+                onTableStatusChanged: handleTableStatusChanged,
                 onBillRequested: (bill) => {
                     queryClient.invalidateQueries({ queryKey: billKeys.all })
                     showBillRequestToast(bill, () => { window.location.href = '/admin/orders' })

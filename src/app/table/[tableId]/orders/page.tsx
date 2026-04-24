@@ -43,9 +43,9 @@ export default function GuestOrdersPage() {
   const [billPaid, setBillPaid] = useState(false)
   const params = useParams()
   const router = useRouter()
-  const tableId = params.tableId as string
+  const tableNumber = params.tableId as string
   const accessToken = getGuestAccessToken()
-  const tableNumber = getGuestInfo()?.tableNumber ?? Number(tableId)
+  // const tableNumber = getGuestInfo()?.tableNumber
 
 
 
@@ -55,20 +55,20 @@ export default function GuestOrdersPage() {
 
   // Guard
   useEffect(() => {
-    if (!isGuestLoggedIn()) router.replace(`/table/${tableId}/welcome`)
-  }, [tableId, router])
+    if (!isGuestLoggedIn()) router.replace(`/table/${tableNumber}/welcome`)
+  }, [tableNumber, router])
 
 
   // Dùng hook từ useGuest.ts — đúng pattern TanStack Query
-  const { data, isLoading, error, refetch, isFetching } = useGetMyOrders(tableId, accessToken)
+  const { data, isLoading, error, refetch, isFetching } = useGetMyOrders(tableNumber, accessToken)
 
   // Handle 401
   useEffect(() => {
     if ((error as any)?.status === 401) {
       toast.error('Phiên đã hết hạn. Vui lòng quét QR lại.')
-      router.replace(`/table/${tableId}/welcome`)
+      router.replace(`/table/${tableNumber}/welcome`)
     }
-  }, [error, tableId, router])
+  }, [error, tableNumber, router])
 
   // ── SignalR: nhận realtime update từ bếp ──────────
   const handleOrderStatusUpdated = useCallback((order: OrderDto) => {
@@ -80,8 +80,8 @@ export default function GuestOrdersPage() {
       })
     }
     // Invalidate để list tự refresh ngay
-    queryClient.invalidateQueries({ queryKey: guestKeys.myOrders(tableId) })
-  }, [queryClient, tableId])
+    queryClient.invalidateQueries({ queryKey: guestKeys.myOrders(tableNumber) })
+  }, [queryClient, tableNumber])
 
 
 
@@ -89,14 +89,14 @@ export default function GuestOrdersPage() {
     accessToken
       ? {
         role: 'guest',
-        tableId: Number(tableNumber),
+        tableNumber: Number(tableNumber),
         token: accessToken,
         onOrderStatusUpdated: handleOrderStatusUpdated,
         onBillPaid: () => setBillPaid(true),
       }
       : {
         role: 'guest',
-        tableId: Number(tableNumber),
+        tableNumber: Number(tableNumber),
         token: null,
       }
   )
@@ -108,12 +108,12 @@ export default function GuestOrdersPage() {
     <div className="flex min-h-screen flex-col pb-32">
       {/* Header */}
       <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border-subtle bg-background px-4 py-4">
-        <Link href={`/table/${tableId}`} className="text-foreground hover:text-primary transition-colors">
+        <Link href={`/table/${tableNumber}`} className="text-foreground hover:text-primary transition-colors">
           <ArrowLeft className="h-5 w-5" />
         </Link>
         <div className="text-center">
           <h1 className="text-lg font-bold uppercase tracking-wide text-foreground">Đơn của tôi</h1>
-          <p className="text-xs font-bold uppercase tracking-wider text-primary">Bàn {tableId}</p>
+          <p className="text-xs font-bold uppercase tracking-wider text-primary">Bàn {tableNumber}</p>
         </div>
         {/* Refresh + Live indicator */}
         <div className="flex items-center gap-2">
@@ -142,7 +142,7 @@ export default function GuestOrdersPage() {
       {!isLoading && orders.length === 0 && (
         <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
           <p className="text-sm text-muted-foreground mb-4">Bạn chưa có đơn nào</p>
-          <Link href={`/table/${tableId}`}
+          <Link href={`/table/${tableNumber}`}
             className="rounded-md bg-primary px-6 py-3 font-bold uppercase tracking-wide text-primary-foreground shadow-md hover:shadow-gold">
             Xem thực đơn
           </Link>
@@ -201,12 +201,9 @@ export default function GuestOrdersPage() {
         </div>
       )}
 
-
-
       {!isLoading && orders.length > 0 && (
         <BillGuestRequestSection orders={orders} accessToken={accessToken} billPaid={billPaid} />
       )}
-
 
     </div>
   )

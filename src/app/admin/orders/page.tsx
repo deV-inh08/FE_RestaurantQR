@@ -1,7 +1,10 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useMemo, useState, useCallback } from "react"
 import { AdminHeader } from "@/src/components/admin/admin-header"
+import { useQueryClient } from "@tanstack/react-query"
+import { useOrderSignalR } from "@/src/hooks/useOrderSignalR"
+import { getAccessTokenFromLocalStorage } from "@/src/lib/utils"
 import { Button } from "@/src/components/ui/button"
 import {
   Select,
@@ -22,7 +25,7 @@ import {
 import { Calendar, Eye, Pencil, Plus, Search } from "lucide-react"
 import { cn, formatCurrency, formatTime } from "@/src/lib/utils"
 import PaginationV1 from "@/src/components/pagination/pagination_v1"
-import { useGetOrders } from "@/src/queries/useOrder"
+import { useGetOrders, orderKeys } from "@/src/queries/useOrder"
 import StatusSelect, { STATUS_LABELS, STATUS_VALUES, OrderStatus, STATUS_STYLES } from "./components/status_select"
 import CreateOrderModal from "./components/addOrder"
 import { STATUS_ORDER_STYLE, StatusBadge, ViewOrderModal } from "./components/viewModel"
@@ -31,18 +34,6 @@ import { OrderDto } from "@/src/schema/order.schema"
 import TableStatusGrid from "./components/TableStatusGrid"
 import { OrderRowSkeleton } from "@/src/components/Skeleton/skeleton"
 import BillAdminRequestSection from "@/src/components/bill/BillAdminRequestSection"
-
-
-
-function StatusPill({ status }: { status: string }) {
-  return (
-    <span className={cn('inline-flex rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider',
-      STATUS_STYLES[status as OrderStatus] ?? 'bg-white/8 text-foreground')}>
-      {STATUS_LABELS[status as OrderStatus] ?? status}
-    </span>
-  )
-}
-
 
 
 type TableStatus = "empty" | "occupied" | "reserved"
@@ -82,19 +73,24 @@ export default function OrdersPage() {
 
   const { data, isLoading } = useGetOrders({ page, pageSize: PAGE_SIZE })
 
+  const queryClient = useQueryClient()
+
+  const handleOrderChange = useCallback(() => {
+    // Invalidate queries để refetch lại danh sách order
+    queryClient.invalidateQueries({ queryKey: orderKeys.allOrders })
+  }, [queryClient])
+
+  useOrderSignalR({
+    role: 'staff',
+    token: getAccessTokenFromLocalStorage(),
+    onOrderCreated: handleOrderChange,
+    onOrderStatusUpdated: handleOrderChange,
+  })
+
   const handleTableClick = (tableId: number) => {
     setCreatePreselectedTable(tableId)
     setIsCreateOpen(true)
   }
-
-  const guestItemCount = useMemo(() => {
-    const map: Record<string, number> = {}
-    for (const o of data?.payload.data.data ?? []) {
-      const key = `${o.tableId}-${o.guestId}`
-      map[key] = (map[key] ?? 0) + 1
-    }
-    return map
-  }, [data])
 
   const getTotal = (o: OrderDto) =>
     o.dishPrice ? formatCurrency(o.dishPrice * o.quantity) : '—'
@@ -204,7 +200,6 @@ export default function OrdersPage() {
                     </TableRow>
                   )}
                   {orders.map(order => {
-                    const guestKey = `${order.tableId}-${order.guestId}`
                     return (
                       <TableRow key={order.id} className="border-border-subtle transition-colors hover:bg-gold-subtle/20">
                         <TableCell className="font-mono font-bold text-foreground">

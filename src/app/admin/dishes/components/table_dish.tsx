@@ -81,6 +81,7 @@ const TableDish = (props: {
                                     fill
                                     className="object-cover"
                                 />
+
                             </div>
                         </TableCell>
                         <TableCell className="font-medium text-foreground">

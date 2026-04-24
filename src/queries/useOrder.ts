@@ -12,7 +12,7 @@ export const useGetOrders = ({ page, pageSize }: { page: number, pageSize: numbe
         queryKey: orderKeys.all(page, pageSize),
         queryFn: () => orderApiRequest.getAll(page, pageSize),
         // Poll every 15s so the order list stays fresh without WebSocket
-        refetchInterval: 15_000
+        // refetchInterval: 15_000
     })
 
 export const useUpdateOrderStatusMutation = () => {
