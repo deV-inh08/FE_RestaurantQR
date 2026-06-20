@@ -23,7 +23,7 @@ const SERVICE_MAP: Record<ServiceName, ServiceEntry> = {
     guest: { baseUrl: serverConfig.ORDER_API_URL, auth: 'guest' },
 }
 
-const HOP_BY_HOP_REQUEST_HEADERS = new Set([
+const HOP_BY_HOP = new Set([
     'host', 'cookie', 'content-length', 'connection', 'accept-encoding',
 ])
 
@@ -46,37 +46,89 @@ function setAuthCookies(
     })
 }
 
-async function refreshStaffToken(): Promise<{ accessToken: string; refreshToken: string } | null> {
+function clearAuthCookies(
+    res: NextResponse,
+    auth: AuthMode,
+) {
+    if (auth === 'guest') {
+        res.cookies.delete('guestAccessToken')
+        res.cookies.delete('guestRefreshToken')
+    } else {
+        res.cookies.delete('accessToken')
+        res.cookies.delete('refreshToken')
+    }
+}
+
+/**
+ * Staff refresh — Identity.API
+ * POST {IDENTITY_API_URL}/auth/refresh-token
+ * Body:     { refreshToken: string }
+ * Response: { message, data: { accessToken, refreshToken } }
+ *
+ * Lưu ý: Identity.API dùng rotation — xóa token cũ, tạo token mới mỗi lần refresh.
+ */
+async function refreshStaffToken(): Promise<{
+    accessToken: string
+    refreshToken: string
+} | null> {
     const cookieStore = await cookies()
     const refreshToken = cookieStore.get('refreshToken')?.value
     if (!refreshToken) return null
+
     try {
-        const res = await fetch(`${serverConfig.IDENTITY_API_URL}/auth/refresh-token`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken }),
-        })
+        const res = await fetch(
+            `${serverConfig.IDENTITY_API_URL}/auth/refresh-token`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refreshToken }),
+            }
+        )
         if (!res.ok) return null
+
         const json = await res.json()
+        // json.data = { accessToken, refreshToken }
         return json?.data ?? null
     } catch {
         return null
     }
 }
 
-async function refreshGuestToken(): Promise<{ accessToken: string; refreshToken: string } | null> {
+/**
+ * Guest refresh — Order.API
+ * POST {ORDER_API_URL}/guest/refresh-token
+ * Body:     { refreshToken: string }
+ * Response: { message, data: { guest, accessToken, refreshToken } }
+ *
+ * Lưu ý: Guest token không lưu DB — validate bằng JWT signature + sessionId.
+ * Nếu Staff reset bàn → sessionId đổi → refresh token từ chối dù còn hạn.
+ */
+async function refreshGuestToken(): Promise<{
+    accessToken: string
+    refreshToken: string
+} | null> {
     const cookieStore = await cookies()
     const refreshToken = cookieStore.get('guestRefreshToken')?.value
     if (!refreshToken) return null
+
     try {
-        const res = await fetch(`${serverConfig.ORDER_API_URL}/guest/refresh-token`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken }),
-        })
+        const res = await fetch(
+            `${serverConfig.ORDER_API_URL}/guest/refresh-token`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refreshToken }),
+            }
+        )
         if (!res.ok) return null
+
         const json = await res.json()
-        return json?.data ?? null
+        // json.data = { guest, accessToken, refreshToken }
+        // Chỉ cần accessToken + refreshToken, bỏ qua guest object
+        const { accessToken, refreshToken: newRT } = json?.data ?? {}
+        if (!accessToken || !newRT) return null
+
+        return { accessToken, refreshToken: newRT }
     } catch {
         return null
     }
@@ -90,44 +142,63 @@ async function toNextResponse(upstream: Response): Promise<NextResponse> {
     })
 }
 
+// ─── Main proxy ───────────────────────────────────────────────────────────────
+
 /**
- * Forward `request` tới microservice xác định bởi `pathSegments[0]`, tự gắn
- * Bearer token đúng từ httpOnly cookie tương ứng, và tự retry 1 lần sau khi
- * silent-refresh nếu gặp 401 — client KHÔNG bao giờ thấy hoặc xử lý token.
+ * Forward request tới microservice, tự động refresh token khi gặp 401.
  *
- * `pathSegments` là toàn bộ catch-all param, ví dụ ['menu', 'dishes', '12'].
+ * Flow:
+ * 1. Đọc cookie đúng loại (accessToken hoặc guestAccessToken)
+ * 2. Forward request kèm Bearer token (hoặc không nếu không có cookie)
+ * 3. Nếu backend trả 401:
+ *    - Gọi refresh endpoint tương ứng (staff hoặc guest)
+ *    - Nếu refresh thành công → retry request với token mới + set cookie mới
+ *    - Nếu refresh thất bại → trả 401 + xóa cookie cũ (session chết)
  *
- * Lưu ý: body được buffer 1 lần vào ArrayBuffer (không stream trực tiếp)
- * để có thể gửi lại lần 2 khi cần retry sau refresh — ReadableStream chỉ đọc
- * được 1 lần nên không thể tái sử dụng cho 2 lần fetch. Với app này (ảnh tối
- * đa 5MB) đánh đổi này là hợp lý.
+ * FIX so với bản cũ: bỏ điều kiện `&& token` khỏi check 401.
+ * Lý do: khi accessToken cookie đã hết hạn (browser xóa), token = null,
+ * nhưng refreshToken vẫn có thể còn hiệu lực. Cần thử refresh trong cả
+ * trường hợp này chứ không chỉ khi backend từ chối token còn tồn tại.
  */
-export async function proxyRequest(request: NextRequest, pathSegments: string[]): Promise<NextResponse> {
+export async function proxyRequest(
+    request: NextRequest,
+    pathSegments: string[]
+): Promise<NextResponse> {
     const [service, ...rest] = pathSegments
     const entry = SERVICE_MAP[service as ServiceName]
 
     if (!entry) {
-        return NextResponse.json({ message: `Unknown BFF service prefix: ${service}` }, { status: 404 })
+        return NextResponse.json(
+            { message: `Unknown service: ${service}` },
+            { status: 404 }
+        )
     }
 
+    // ── Lấy token từ cookie ──────────────────────────────────────────────────
     const cookieStore = await cookies()
     const tokenCookieName = entry.auth === 'guest' ? 'guestAccessToken' : 'accessToken'
-    const token = entry.auth === 'none' ? null : cookieStore.get(tokenCookieName)?.value ?? null
+    const token = entry.auth === 'none'
+        ? null
+        : cookieStore.get(tokenCookieName)?.value ?? null
 
+    // ── Build target URL ─────────────────────────────────────────────────────
     const search = request.nextUrl.search ?? ''
     const targetUrl = `${entry.baseUrl}/${rest.join('/')}${search}`
 
+    // ── Buffer body một lần để có thể gửi lại khi retry ─────────────────────
     const hasBody = !['GET', 'HEAD'].includes(request.method)
     const bodyBuffer = hasBody ? await request.arrayBuffer() : undefined
 
     const doFetch = (bearer: string | null) => {
         const headers = new Headers()
         request.headers.forEach((value, key) => {
-            if (!HOP_BY_HOP_REQUEST_HEADERS.has(key.toLowerCase())) headers.set(key, value)
+            if (!HOP_BY_HOP.has(key.toLowerCase())) headers.set(key, value)
         })
-        if (bearer) headers.set('Authorization', `Bearer ${bearer}`)
-        else headers.delete('Authorization')
-
+        if (bearer) {
+            headers.set('Authorization', `Bearer ${bearer}`)
+        } else {
+            headers.delete('Authorization')
+        }
         return fetch(targetUrl, {
             method: request.method,
             headers,
@@ -135,35 +206,36 @@ export async function proxyRequest(request: NextRequest, pathSegments: string[])
         })
     }
 
+    // ── Initial request ──────────────────────────────────────────────────────
     let upstream = await doFetch(token)
 
-    // Silent refresh-and-retry đúng 1 lần — chỉ khi ban đầu có gắn token
-    // (endpoint AllowAnonymous không có token thì 401 ở đây là lỗi thật,
-    // không liên quan gì tới hết hạn token).
-    if (upstream.status === 401 && entry.auth !== 'none' && token) {
-        const refreshed = entry.auth === 'guest' ? await refreshGuestToken() : await refreshStaffToken()
+    // ── Silent refresh khi 401 ───────────────────────────────────────────────
+    // FIX: bỏ `&& token` — refresh cả khi cookie accessToken đã hết hạn/bị xóa.
+    // `entry.auth !== 'none'` đảm bảo không retry cho public endpoints.
+    if (upstream.status === 401 && entry.auth !== 'none') {
+        const refreshFn = entry.auth === 'guest' ? refreshGuestToken : refreshStaffToken
+        const refreshed = await refreshFn()
 
         if (refreshed) {
+            // Retry với token mới
             upstream = await doFetch(refreshed.accessToken)
             const finalRes = await toNextResponse(upstream)
-            if (entry.auth === 'guest') {
-                setAuthCookies(finalRes, 'guestAccessToken', 'guestRefreshToken', refreshed.accessToken, refreshed.refreshToken)
-            } else {
-                setAuthCookies(finalRes, 'accessToken', 'refreshToken', refreshed.accessToken, refreshed.refreshToken)
-            }
+
+            // Set cookie mới vào response để browser cập nhật
+            setAuthCookies(
+                finalRes,
+                entry.auth === 'guest' ? 'guestAccessToken' : 'accessToken',
+                entry.auth === 'guest' ? 'guestRefreshToken' : 'refreshToken',
+                refreshed.accessToken,
+                refreshed.refreshToken,
+            )
             return finalRes
         }
 
-        // Refresh thất bại -> session đã chết thật, xoá cookie để client
-        // không cố gọi lại vô tận.
+        // Refresh thất bại → session chết hoàn toàn, xóa cookie cũ
+        // Phía client sẽ nhận 401 → auth.service.ts redirect về /login hoặc /welcome
         const deadRes = await toNextResponse(upstream)
-        if (entry.auth === 'guest') {
-            deadRes.cookies.delete('guestAccessToken')
-            deadRes.cookies.delete('guestRefreshToken')
-        } else {
-            deadRes.cookies.delete('accessToken')
-            deadRes.cookies.delete('refreshToken')
-        }
+        clearAuthCookies(deadRes, entry.auth)
         return deadRes
     }
 

@@ -32,8 +32,8 @@ export const useRequestBillMutation = () => {
 export const useConfirmBillMutation = () => {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: ({ id, body }: { id: number; body: ConfirmBillBodyType }) =>
-            billApiRequest.confirm(id, body),
+        mutationFn: ({ id, accountId }: { id: number; accountId: number }) =>
+            billApiRequest.confirm(id, { accountId }),
         onSuccess: () => queryClient.invalidateQueries({ queryKey: billKeys.all }),
     })
 }
