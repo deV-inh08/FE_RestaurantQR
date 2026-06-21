@@ -7,6 +7,7 @@ import { Toaster } from '@/src/components/ui/sonner'
 import { ThemeProvider } from '../components/theme-provider'
 import openGraph from "../../public/open_graph.png"
 import NextTopLoader from 'nextjs-toploader';
+import { GoogleAnalytics } from "@next/third-parties/google"
 
 const _inter = Inter({ subsets: ["latin"] });
 const _geistMono = Geist_Mono({ subsets: ["latin"] });
@@ -51,6 +52,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode
 }>) {
+  const gaId = process.env.NEXT_PUBLIC_GA_ID || ""
   return (
     <html lang="en" className="bg-background" suppressHydrationWarning>
       <body className="font-sans antialiased bg-background text-foreground">
@@ -59,9 +61,10 @@ export default function RootLayout({
             <NextTopLoader showSpinner={false} color="#FFC000"></NextTopLoader>
             {children}
           </AppProvider>
-          {process.env.NODE_ENV === 'production' && <Analytics />}
+          <Analytics />
           <Toaster />
         </ThemeProvider>
+        <GoogleAnalytics gaId={gaId} />
       </body>
     </html>
   )
