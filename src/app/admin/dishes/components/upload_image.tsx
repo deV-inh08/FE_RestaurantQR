@@ -39,8 +39,8 @@ const ImageUpload = ({ value, existingUrl, onChange }: ImageUploadProps) => {
             alert("Only PNG and JPG are allowed")
             return
         }
-        if (file.size > 5 * 1024 * 1024) {
-            alert("File size must be under 5MB")
+        if (file.size > 10 * 1024 * 1024) {
+            alert("File size must be under 10MB")
             return
         }
         onChange(file)
