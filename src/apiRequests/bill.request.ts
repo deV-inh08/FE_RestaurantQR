@@ -10,10 +10,10 @@ const billApiRequest = {
 
     // Guest yêu cầu thanh toán — guestAccessToken cookie được BFF tự gắn,
     // không còn truyền guestAccessToken làm tham số nữa.
-    request: () => http.post<BillResType>('/bill/request', null, { service: 'order' }),
+    request: () => http.post<BillResType>('/bill/request', null, { service: 'guest' }),
 
     confirm: (id: number, body: ConfirmBillBodyType) =>
-        http.patch<BillResType>(`/bill/${id}/pay`, body, { service: 'guest' }),
+        http.patch<BillResType>(`/bill/${id}/pay`, body, { service: 'order' }),
 }
 
 export default billApiRequest
