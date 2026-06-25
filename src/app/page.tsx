@@ -4,11 +4,14 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useGetDishes } from "../queries/useDish"
 import { handleImageURL } from "@/src/lib/utils"
+import QRScannerModal from "@/src/components/admin/QRscanner"
+import { useState } from "react"
 
 
 export default function HomePage() {
   const router = useRouter()
   const { data, isLoading } = useGetDishes()
+  const [showScanner, setShowScanner] = useState(false)  // ← thêm state này
 
   const featuredDishes = (data?.payload.data.data ?? [])
     .filter((d) => d.status === "Available")
@@ -72,7 +75,7 @@ export default function HomePage() {
               ADMIN LOGIN
             </Link>
             <button
-              onClick={() => router.push("/tables/1")}
+              onClick={() => setShowScanner(true)}
               style={{
                 backgroundColor: "#FFC000",
                 color: "#000000",
@@ -99,6 +102,12 @@ export default function HomePage() {
           </div>
         </div>
       </header>
+
+      {/* QR Scanner Modal */}
+      <QRScannerModal
+        isOpen={showScanner}
+        onClose={() => setShowScanner(false)}
+      />
 
       {/* Hero Section */}
       <section
